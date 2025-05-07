@@ -11,6 +11,9 @@ Le projet est organisé en plusieurs modules pour faciliter la maintenance et la
 - `model_training.py` : Entraînement du modèle YOLOv5-Face
 - `model_evaluation.py` : Évaluation et exportation du modèle
 - `utils.py` : Fonctions utilitaires communes
+- `colab_setup.py` : Configuration de l'environnement et clonage du dépôt
+- `pytorch_fix.py` : Correction de compatibilité pour PyTorch 2.6+
+- `plan.txt` : Documentation de l'état du projet et des améliorations
 
 ## Prérequis
 
@@ -23,24 +26,51 @@ Le projet est organisé en plusieurs modules pour faciliter la maintenance et la
 
 ## Installation
 
-1. Téléchargez tous les fichiers du projet sur votre ordinateur
-2. Créez un nouveau notebook Google Colab
-3. Uploadez tous les fichiers du projet dans le notebook via le menu "Fichiers"
-4. Assurez-vous que tous les fichiers sont bien visibles dans l'environnement Colab
+1. Créez un dossier dans votre Google Drive pour stocker les scripts :
+   `/content/drive/MyDrive/yolov5_face_scripts/`
+
+2. Téléchargez et placez tous les fichiers du projet dans ce dossier
+   
+3. Créez un dossier pour les datasets :
+   `/content/drive/MyDrive/dataset/`
+   
+4. Placez les fichiers WIDER Face dans ce dossier
 
 ## Utilisation
 
-### Méthode simple
+### Méthode recommandée
 
-Exécutez la cellule suivante dans votre notebook Colab pour lancer l'ensemble du pipeline :
+Suivez ces étapes dans un notebook Google Colab :
 
 ```python
+# Étape 1: Monter Google Drive et copier les scripts
+from google.colab import drive
+drive.mount('/content/drive')
+!mkdir -p /content
+!cp /content/drive/MyDrive/yolov5_face_scripts/{main.py,data_preparation.py,model_training.py,model_evaluation.py,utils.py,colab_setup.py,pytorch_fix.py} /content/
+
+# Étape 2: Installer les dépendances compatibles
+!pip install numpy==1.26.4 scipy==1.13.1 gensim==4.3.3 --no-deps
+!pip install torch>=2.0.0 torchvision>=0.15.0
+
+# Étape 3: Exécuter le script de configuration
+%cd /content
+!python colab_setup.py --model-size s
+
+# Étape 3.5: Corriger la compatibilité PyTorch
+!python pytorch_fix.py
+
+# Étape 4: Lancer l'entraînement
 !python main.py
+
+# Étape 5: Visualiser les résultats
+%load_ext tensorboard
+%tensorboard --logdir /content/yolov5-face/runs/train/face_detection_transfer
 ```
 
-### Options avancées
+### Options avancées pour l'entraînement
 
-Vous pouvez également personnaliser l'exécution avec différentes options :
+Vous pouvez personnaliser l'exécution avec différentes options :
 
 ```python
 # Exemples d'utilisation avec des options personnalisées
@@ -52,27 +82,59 @@ Options disponibles :
 - `--epochs` : Nombre d'epochs d'entraînement (défaut: 300)
 - `--img-size` : Taille d'image pour l'entraînement (défaut: 640)
 - `--model-size` : Taille du modèle YOLOv5 (s, m, l, x) (défaut: s)
+- `--yolo-version` : Version de YOLOv5 à utiliser (défaut: 5.0)
 - `--skip-train` : Ignorer l'étape d'entraînement
 - `--skip-evaluation` : Ignorer l'étape d'évaluation
 - `--skip-export` : Ignorer l'étape d'exportation
+
+## Vérifications recommandées
+
+Pour vous assurer que tout est correctement configuré :
+
+```python
+# Vérifier la présence des fichiers nécessaires
+import os
+required_files = ['main.py', 'data_preparation.py', 'model_training.py', 'model_evaluation.py', 'utils.py', 'pytorch_fix.py']
+missing_files = [f for f in required_files if not os.path.exists(f'/content/{f}')]
+if missing_files:
+    print(f"⚠️ Fichiers manquants: {', '.join(missing_files)}")
+else:
+    print("✅ Tous les fichiers nécessaires sont présents.")
+
+# Vérifier que le dépôt YOLOv5-Face est correctement cloné
+if os.path.exists('/content/yolov5-face'):
+    print("✅ Le dépôt YOLOv5-Face est correctement cloné.")
+else:
+    print("⚠️ Le dépôt YOLOv5-Face n'est pas cloné.")
+
+# Vérifier que la correction PyTorch a été appliquée
+!grep "weights_only=False" /content/yolov5-face/train.py
+```
 
 ## Corrections apportées
 
 Cette version corrige plusieurs problèmes du script original :
 
 1. **Problème API NumPy** : Correction de l'erreur liée à `np.int` déprécié (remplacé par `np.int32`)
-2. **Gestion des images corrompues** : Amélioration du filtrage des images et annotations non valides
-3. **Structure du code** : Organisation en modules pour une meilleure maintenabilité
-4. **Robustesse des commandes** : Utilisation de `subprocess.run()` au lieu de commandes shell directes
-5. **Gestion des erreurs** : Meilleure gestion des exceptions et messages d'erreur détaillés
+2. **Compatibilité PyTorch 2.6+** : Ajout du paramètre `weights_only=False` à la fonction `torch.load()`
+3. **Gestion des images corrompues** : Amélioration du filtrage des images et annotations non valides
+4. **Structure du code** : Organisation en modules pour une meilleure maintenabilité
+5. **Robustesse des commandes** : Utilisation de `subprocess.run()` au lieu de commandes shell directes
+6. **Gestion des erreurs** : Meilleure gestion des exceptions et messages d'erreur détaillés
 
-## Flux de travail
+## Dépannage
 
-1. **Configuration de l'environnement** : Installation des dépendances et préparation de l'environnement Colab
-2. **Préparation des données** : Extraction et conversion des annotations WIDER Face au format YOLO
-3. **Entraînement** : Transfert learning à partir des poids YOLOv5 pré-entraînés
-4. **Évaluation** : Évaluation du modèle sur l'ensemble de validation WIDER Face
-5. **Exportation** : Exportation du modèle au format ONNX pour le déploiement
+Si vous rencontrez cette erreur : 
+```
+ckpt = torch.load(weights, map_location=device)  # load checkpoint
+```
+
+Exécutez le script de correction PyTorch :
+```python
+!python pytorch_fix.py
+```
+
+Ce script corrige automatiquement les problèmes de compatibilité avec PyTorch 2.6+, y compris les situations où une correction incorrecte a été appliquée précédemment.
 
 ## Résultats
 
@@ -83,11 +145,18 @@ Après l'exécution complète, vous trouverez les résultats dans les répertoir
 - Métriques et logs : `/content/yolov5-face/runs/train/face_detection_transfer`
 - Visualisation TensorBoard : Accessible via TensorBoard dans Colab
 
-## Auteur
+## Sauvegarde des résultats
 
-Ce code a été restructuré et corrigé pour une meilleure utilisation sur Google Colab.
+Pour sauvegarder les résultats sur votre Google Drive :
+
+```python
+# Créer un dossier pour les résultats
+!mkdir -p /content/drive/MyDrive/YOLOv5_Face_Results
+
+# Copier les résultats de l'entraînement vers Google Drive
+!cp -r /content/yolov5-face/runs/train/face_detection_transfer /content/drive/MyDrive/YOLOv5_Face_Results/
+```
 
 ## Licence
 
 Ce projet est basé sur [YOLOv5-Face](https://github.com/deepcam-cn/yolov5-face) et suit la même licence que le projet original.
-# train-yolov5-face

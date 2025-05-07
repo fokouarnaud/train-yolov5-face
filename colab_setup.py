@@ -62,6 +62,25 @@ def setup_environment(model_size='s', yolo_version='5.0'):
             'torch.load(weights, map_location=device, weights_only=False)'
         )
         
+        # Vérifier si le remplacement a été effectué
+        if modified_content == content:
+            print(f"\nⓘ ATTENTION: Aucun changement n'a été effectué dans le fichier {train_path}!")
+            print("Le motif 'torch.load(weights, map_location=device)' n'a pas été trouvé.")
+            print("Vérifions s'il existe d'autres formats...")
+            
+            # Essayer d'autres formats possibles
+            patterns_to_try = [
+                ('ckpt = torch.load(weights, map_location=device)', 'ckpt = torch.load(weights, map_location=device, weights_only=False)'),
+                ('torch.load(weights,map_location=device)', 'torch.load(weights,map_location=device, weights_only=False)'),
+                ('torch.load( weights, map_location=device )', 'torch.load( weights, map_location=device, weights_only=False )')
+            ]
+            
+            for old_pattern, new_pattern in patterns_to_try:
+                if old_pattern in content:
+                    modified_content = content.replace(old_pattern, new_pattern)
+                    print(f"✓ Motif alternatif trouvé et remplacé: '{old_pattern}'")
+                    break
+        
         # Sauvegarder le fichier modifié
         with open(train_path, 'w') as f:
             f.write(modified_content)
