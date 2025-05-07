@@ -8,6 +8,7 @@ import os
 import subprocess
 from google.colab import drive
 import traceback
+import re
 
 def setup_environment(yolo_dir):
     """Configure l'environnement pour YOLOv5-Face
@@ -93,85 +94,134 @@ def fix_numpy_issue(yolo_dir):
     """
     print("\n=== Correction des erreurs de NumPy API ===\n")
     
-    # Recherche récursive de tous les fichiers Python pouvant contenir np.int
-    python_files = []
-    for root, dirs, files in os.walk(yolo_dir):
-        for file in files:
-            if file.endswith('.py'):
-                python_files.append(os.path.join(root, file))
+    # Liste des fichiers critiques connus pour causer des problèmes
+    critical_files = [
+        os.path.join(yolo_dir, 'utils', 'face_datasets.py')
+    ]
     
     try:
         fixed_files = 0
-        critical_files = []
         
-        # Vérifier d'abord les fichiers connus pour causer des problèmes
-        face_datasets_path = os.path.join(yolo_dir, 'utils', 'face_datasets.py')
-        if os.path.exists(face_datasets_path):
-            critical_files.append(face_datasets_path)
-            print(f"✓ Fichier critique trouvé: {os.path.relpath(face_datasets_path, yolo_dir)}")
-        
-        # Traiter d'abord les fichiers critiques
+        # 1. Corriger d'abord les fichiers critiques avec une méthode directe
         for file_path in critical_files:
-            try:
-                # Lire le contenu du fichier
-                with open(file_path, 'r') as f:
-                    content = f.read()
+            if os.path.exists(file_path):
+                print(f"✓ Traitement du fichier critique: {os.path.relpath(file_path, yolo_dir)}")
                 
-                # Vérifier spécifiquement pour "np.int" (et pas juste en tant que sous-chaîne)
-                if "np.int" in content and not "np.int32" in content and not "np.int64" in content:
-                    # Remplacer np.int par np.int32
-                    modified_content = content.replace("np.int", "np.int32")
+                try:
+                    # Lire le contenu du fichier
+                    with open(file_path, 'r') as f:
+                        content = f.read()
                     
-                    # Sauvegarder le fichier modifié
-                    with open(file_path, 'w') as f:
-                        f.write(modified_content)
+                    # Rechercher spécifiquement la ligne problématique
+                    if 'np.int' in content:
+                        # Corriger avec une expression régulière pour cibler uniquement np.int isolé
+                        modified_content = re.sub(r'np\.int\b', 'np.int32', content)
+                        
+                        # Si le contenu a été modifié
+                        if modified_content != content:
+                            # Sauvegarder le fichier modifié
+                            with open(file_path, 'w') as f:
+                                f.write(modified_content)
+                            
+                            print(f"✅ Correction effectuée dans {os.path.relpath(file_path, yolo_dir)}")
+                            fixed_files += 1
+                        else:
+                            print(f"⚠️ Aucune modification n'a été apportée à {os.path.relpath(file_path, yolo_dir)}")
+                            
+                            # Rechercher et rapporter les lignes spécifiques contenant np.int
+                            lines = content.split('\n')
+                            for i, line in enumerate(lines):
+                                if 'np.int' in line:
+                                    print(f"    Ligne {i+1}: {line.strip()}")
+                            
+                            # Correction manuelle de la ligne spécifique
+                            if "bi = np.floor(np.arange(n) / batch_size).astype(np.int)" in content:
+                                modified_content = content.replace(
+                                    "bi = np.floor(np.arange(n) / batch_size).astype(np.int)",
+                                    "bi = np.floor(np.arange(n) / batch_size).astype(np.int32)"
+                                )
+                                with open(file_path, 'w') as f:
+                                    f.write(modified_content)
+                                print(f"✅ Correction manuelle effectuée pour la ligne spécifique")
+                                fixed_files += 1
+                except Exception as e:
+                    print(f"✗ Erreur lors de la correction de {file_path}: {e}")
                     
-                    print(f"✓ Correction PRIORITAIRE effectuée dans {os.path.relpath(file_path, yolo_dir)}")
-                    fixed_files += 1
-                    # Retirer le fichier de la liste principale pour éviter la duplication
-                    python_files = [f for f in python_files if f != file_path]
-            except Exception as file_error:
-                print(f"✗ Erreur lors de la correction du fichier critique {file_path}: {file_error}")
+                    # Tentative de correction avec une méthode alternative
+                    try:
+                        # Tenter une correction avec sed (sur les systèmes Unix)
+                        subprocess.run(['sed', '-i', 's/np.int/np.int32/g', file_path], check=False)
+                        print(f"✓ Tentative de correction avec sed pour {os.path.relpath(file_path, yolo_dir)}")
+                    except Exception:
+                        pass
+            else:
+                print(f"✗ Fichier critique non trouvé: {os.path.relpath(file_path, yolo_dir)}")
         
-        # Traiter ensuite tous les autres fichiers Python
-        for file_path in python_files:
-            try:
-                # Lire le contenu du fichier
+        # 2. Recherche récursive de tous les autres fichiers Python pouvant contenir np.int
+        for root, dirs, files in os.walk(yolo_dir):
+            for file in files:
+                if file.endswith('.py'):
+                    file_path = os.path.join(root, file)
+                    
+                    # Ignorer les fichiers déjà traités
+                    if file_path in critical_files:
+                        continue
+                    
+                    try:
+                        # Lire le contenu du fichier
+                        with open(file_path, 'r') as f:
+                            content = f.read()
+                        
+                        # Vérifier si le fichier contient np.int
+                        if "np.int" in content and not "np.int32" in content and not "np.int64" in content:
+                            # Remplacer np.int par np.int32
+                            modified_content = re.sub(r'np\.int\b', 'np.int32', content)
+                            
+                            # Sauvegarder le fichier modifié
+                            with open(file_path, 'w') as f:
+                                f.write(modified_content)
+                            
+                            print(f"✓ Correction effectuée dans {os.path.relpath(file_path, yolo_dir)}")
+                            fixed_files += 1
+                    except Exception as file_error:
+                        print(f"✗ Erreur lors de la vérification de {file_path}: {file_error}")
+        
+        # 3. Vérification finale des fichiers critiques
+        for file_path in critical_files:
+            if os.path.exists(file_path):
                 with open(file_path, 'r') as f:
                     content = f.read()
                 
-                # Vérifier si le fichier contient np.int (avec des espaces ou non)
+                # Vérifier spécifiquement si le problème persiste
                 if "np.int" in content and not "np.int32" in content and not "np.int64" in content:
-                    # Remplacer np.int par np.int32
-                    modified_content = content.replace("np.int", "np.int32")
+                    print(f"\n❌ AVERTISSEMENT: Le fichier {os.path.relpath(file_path, yolo_dir)} contient encore np.int!")
+                    print("Tentative de correction directe avec un remplacement forcé:")
+                    
+                    # Utiliser une méthode plus radicale avec un motif très spécifique
+                    with open(file_path, 'r') as f:
+                        lines = f.readlines()
+                    
+                    # Trouver et corriger la ligne spécifique
+                    for i, line in enumerate(lines):
+                        if "np.int" in line and ".astype(np.int)" in line:
+                            lines[i] = line.replace(".astype(np.int)", ".astype(np.int32)")
+                            print(f"✅ Ligne {i+1} corrigée: {lines[i].strip()}")
                     
                     # Sauvegarder le fichier modifié
                     with open(file_path, 'w') as f:
-                        f.write(modified_content)
+                        f.writelines(lines)
                     
-                    print(f"✓ Correction effectuée dans {os.path.relpath(file_path, yolo_dir)}")
-                    fixed_files += 1
-            except Exception as file_error:
-                print(f"✗ Erreur lors de la vérification de {file_path}: {file_error}")
+                    # Vérifier que la correction a bien été appliquée
+                    with open(file_path, 'r') as f:
+                        new_content = f.read()
+                    
+                    if "np.int" in new_content and "np.int32" not in new_content and "np.int64" not in new_content:
+                        print(f"❌ La correction a échoué. Veuillez corriger manuellement le fichier {os.path.relpath(file_path, yolo_dir)}")
         
         if fixed_files > 0:
             print(f"\n✅ {fixed_files} fichiers corrigés avec succès")
         else:
             print("\n✅ Aucune correction nécessaire, tous les fichiers sont déjà compatibles")
-        
-        # Vérifier spécifiquement que face_datasets.py a été corrigé
-        if os.path.exists(face_datasets_path):
-            with open(face_datasets_path, 'r') as f:
-                content = f.read()
-            if "np.int" in content and not "np.int32" in content and not "np.int64" in content:
-                print(f"\n⚠️ ATTENTION: Le fichier {os.path.relpath(face_datasets_path, yolo_dir)} contient encore np.int!")
-                print("Application d'une correction directe...")
-                
-                # Correction forcée spécifique pour face_datasets.py
-                modified_content = content.replace("np.int", "np.int32")
-                with open(face_datasets_path, 'w') as f:
-                    f.write(modified_content)
-                print(f"✓ Correction forcée appliquée à {os.path.relpath(face_datasets_path, yolo_dir)}")
         
         return True
         
