@@ -91,7 +91,7 @@ def fix_numpy_issue(yolo_dir):
     Returns:
         bool: True si la correction a réussi, False sinon
     """
-    print("\n=== Correction des erreurs de NumPy API ===")
+    print("\n=== Correction des erreurs de NumPy API ===\n")
     
     # Recherche récursive de tous les fichiers Python pouvant contenir np.int
     python_files = []
@@ -102,13 +102,45 @@ def fix_numpy_issue(yolo_dir):
     
     try:
         fixed_files = 0
+        critical_files = []
+        
+        # Vérifier d'abord les fichiers connus pour causer des problèmes
+        face_datasets_path = os.path.join(yolo_dir, 'utils', 'face_datasets.py')
+        if os.path.exists(face_datasets_path):
+            critical_files.append(face_datasets_path)
+            print(f"✓ Fichier critique trouvé: {os.path.relpath(face_datasets_path, yolo_dir)}")
+        
+        # Traiter d'abord les fichiers critiques
+        for file_path in critical_files:
+            try:
+                # Lire le contenu du fichier
+                with open(file_path, 'r') as f:
+                    content = f.read()
+                
+                # Vérifier spécifiquement pour "np.int" (et pas juste en tant que sous-chaîne)
+                if "np.int" in content and not "np.int32" in content and not "np.int64" in content:
+                    # Remplacer np.int par np.int32
+                    modified_content = content.replace("np.int", "np.int32")
+                    
+                    # Sauvegarder le fichier modifié
+                    with open(file_path, 'w') as f:
+                        f.write(modified_content)
+                    
+                    print(f"✓ Correction PRIORITAIRE effectuée dans {os.path.relpath(file_path, yolo_dir)}")
+                    fixed_files += 1
+                    # Retirer le fichier de la liste principale pour éviter la duplication
+                    python_files = [f for f in python_files if f != file_path]
+            except Exception as file_error:
+                print(f"✗ Erreur lors de la correction du fichier critique {file_path}: {file_error}")
+        
+        # Traiter ensuite tous les autres fichiers Python
         for file_path in python_files:
             try:
                 # Lire le contenu du fichier
                 with open(file_path, 'r') as f:
                     content = f.read()
                 
-                # Vérifier si le fichier contient np.int
+                # Vérifier si le fichier contient np.int (avec des espaces ou non)
                 if "np.int" in content and not "np.int32" in content and not "np.int64" in content:
                     # Remplacer np.int par np.int32
                     modified_content = content.replace("np.int", "np.int32")
@@ -123,9 +155,23 @@ def fix_numpy_issue(yolo_dir):
                 print(f"✗ Erreur lors de la vérification de {file_path}: {file_error}")
         
         if fixed_files > 0:
-            print(f"✓ {fixed_files} fichiers corrigés avec succès")
+            print(f"\n✅ {fixed_files} fichiers corrigés avec succès")
         else:
-            print("✓ Aucune correction nécessaire, tous les fichiers sont déjà compatibles")
+            print("\n✅ Aucune correction nécessaire, tous les fichiers sont déjà compatibles")
+        
+        # Vérifier spécifiquement que face_datasets.py a été corrigé
+        if os.path.exists(face_datasets_path):
+            with open(face_datasets_path, 'r') as f:
+                content = f.read()
+            if "np.int" in content and not "np.int32" in content and not "np.int64" in content:
+                print(f"\n⚠️ ATTENTION: Le fichier {os.path.relpath(face_datasets_path, yolo_dir)} contient encore np.int!")
+                print("Application d'une correction directe...")
+                
+                # Correction forcée spécifique pour face_datasets.py
+                modified_content = content.replace("np.int", "np.int32")
+                with open(face_datasets_path, 'w') as f:
+                    f.write(modified_content)
+                print(f"✓ Correction forcée appliquée à {os.path.relpath(face_datasets_path, yolo_dir)}")
         
         return True
         
