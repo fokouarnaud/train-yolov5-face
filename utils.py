@@ -10,6 +10,9 @@ from google.colab import drive
 import traceback
 import re
 
+# Importer la configuration centralisée
+from config import REPO_URL, DEPENDENCIES, DEFAULT_PATHS, INFO_MESSAGES
+
 def setup_environment(yolo_dir):
     """Configure l'environnement pour YOLOv5-Face
     
@@ -34,7 +37,7 @@ def setup_environment(yolo_dir):
         
         # Cloner le dépôt YOLOv5-Face
         print("Clonage du dépôt YOLOv5-Face...")
-        subprocess.run(['git', 'clone', 'https://github.com/deepcam-cn/yolov5-face.git', yolo_dir], check=True)
+        subprocess.run(['git', 'clone', REPO_URL, yolo_dir], check=True)
         
         # Aller dans le répertoire YOLOv5-Face
         os.chdir(yolo_dir)

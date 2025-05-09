@@ -6,7 +6,7 @@ PLAN D'AMÉLIORATION YOLOV5-FACE
 ----------------------------
 
 1. STRUCTURE DU PROJET
-   - Fichiers essentiels conservés : main.py, data_preparation.py, model_training.py, model_evaluation.py, utils.py, colab_setup.py, pytorch_fix.py, README.md, plan.txt, colab_run.py
+   - Fichiers essentiels conservés : main.py, data_preparation.py, model_training.py, model_evaluation.py, utils.py, colab_setup.py, pytorch_fix.py, fix_loss_py.py, README.md, plan.txt, colab_run.py
    - Fichiers redondants déplacés dans le dossier "back" : colab_notebook.py, fix_pytorch_compatibility.py, patch_train_script.py, quick_install.py
    - Main.py modifié pour utiliser directement pytorch_fix.py au lieu de patch_train_script.py et fix_pytorch_compatibility.py
 
@@ -20,19 +20,26 @@ PLAN D'AMÉLIORATION YOLOV5-FACE
      * Vérifie l'application correcte de la correction
      * Accepte un paramètre optionnel yolo_dir avec valeur par défaut
 
-3. PROCESSUS OPTIMISÉ
+3. NOUVEAUX PROBLÈMES RÉSOLUS
+   - Erreur "module 'numpy' has no attribute 'int'" dans face_datasets.py
+     * Solution : Modification de utils.py pour corriger spécifiquement ce problème
+   - Erreur "result type Float can't be cast to the desired output type long int" dans loss.py
+     * Solution : Création du script fix_loss_py.py pour ajouter la conversion .long() aux méthodes clamp_()
+
+4. PROCESSUS OPTIMISÉ
    Étape 1: Monter Google Drive et copier les scripts
    ```python
    from google.colab import drive
    drive.mount('/content/drive')
    !mkdir -p /content
-   !cp /content/drive/MyDrive/yolov5_face_scripts/{main.py,data_preparation.py,model_training.py,model_evaluation.py,utils.py,colab_setup.py,pytorch_fix.py} /content/
+   !cp /content/drive/MyDrive/yolov5_face_scripts/{main.py,data_preparation.py,model_training.py,model_evaluation.py,utils.py,colab_setup.py,pytorch_fix.py,fix_loss_py.py} /content/
    ```
 
    Étape 2: Installer les dépendances compatibles
    ```python
    !pip install numpy==1.26.4 scipy==1.13.1 gensim==4.3.3 --no-deps
    !pip install torch>=2.0.0 torchvision>=0.15.0
+   !pip install opencv-python  # S'assurer que OpenCV est installé
    ```
 
    Étape 3: Exécuter le script de configuration
@@ -41,9 +48,14 @@ PLAN D'AMÉLIORATION YOLOV5-FACE
    !python colab_setup.py --model-size s
    ```
 
-   Étape 3.5 (NOUVELLE): Corriger la compatibilité PyTorch
+   Étape 3.5: Corriger la compatibilité PyTorch pour train.py
    ```python
    !python pytorch_fix.py
+   ```
+
+   Étape 3.6: Corriger le problème de conversion de type dans loss.py
+   ```python
+   !python fix_loss_py.py
    ```
 
    Étape 4: Lancer l'entraînement
@@ -57,11 +69,11 @@ PLAN D'AMÉLIORATION YOLOV5-FACE
    %tensorboard --logdir /content/yolov5-face/runs/train/face_detection_transfer
    ```
 
-4. VÉRIFICATIONS RECOMMANDÉES
+5. VÉRIFICATIONS RECOMMANDÉES
    - Vérifier la présence de tous les fichiers nécessaires
    ```python
    import os
-   required_files = ['main.py', 'data_preparation.py', 'model_training.py', 'model_evaluation.py', 'utils.py', 'pytorch_fix.py']
+   required_files = ['main.py', 'data_preparation.py', 'model_training.py', 'model_evaluation.py', 'utils.py', 'pytorch_fix.py', 'fix_loss_py.py']
    missing_files = [f for f in required_files if not os.path.exists(f'/content/{f}')]
    if missing_files:
        print(f"⚠️ Fichiers manquants: {', '.join(missing_files)}")
@@ -79,22 +91,26 @@ PLAN D'AMÉLIORATION YOLOV5-FACE
    ```python
    !grep "weights_only=False" /content/yolov5-face/train.py
    ```
+   - Vérifier que la correction loss.py a été correctement appliquée
+   ```python
+   !grep "long()" /content/yolov5-face/utils/loss.py
+   ```
 
-5. POINTS D'AMÉLIORATION FUTURS
-   - Intégrer la correction PyTorch directement dans colab_setup.py pour éviter l'étape supplémentaire
+6. POINTS D'AMÉLIORATION FUTURS
+   - Intégrer toutes les corrections dans un seul script pour simplifier le processus
    - Créer un notebook Colab pré-configuré avec toutes les cellules
    - Documenter plus clairement les dépendances entre les fichiers
    - Ajouter des tests automatiques pour vérifier la compatibilité
    - Mettre en place un système de sauvegarde automatique des résultats
 
-6. DOCUMENTATION À METTRE À JOUR
-   - Mettre à jour README.md pour inclure l'étape de correction PyTorch (3.5)
+7. DOCUMENTATION À METTRE À JOUR
+   - Mettre à jour README.md pour inclure toutes les étapes de correction
    - Documenter les fichiers obsolètes et leur remplacement
    - Ajouter des instructions de dépannage en cas d'erreur
    - Clarifier le processus de configuration des dépendances
 
-7. MODIFICATIONS RÉCENTES
-   - Correction de la fonction fix_pytorch_compatibility() pour accepter un paramètre optionnel yolo_dir
-   - Mise à jour de main.py pour utiliser directement la fonction fix_pytorch_compatibility()
-   - Élimination complète de toute dépendance aux fichiers déplacés dans "back"
-   - Mise à jour du plan.txt pour refléter l'état actuel du projet
+8. MODIFICATIONS RÉCENTES
+   - Ajout du script fix_loss_py.py pour corriger le problème de conversion de type
+   - Mise à jour du processus d'installation pour inclure explicitement opencv-python
+   - Amélioration de la fonction fix_numpy_issue() dans utils.py
+   - Mise à jour de plan.txt pour refléter les nouvelles étapes du processus

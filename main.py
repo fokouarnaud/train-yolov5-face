@@ -10,12 +10,16 @@ import argparse
 import time
 from pathlib import Path
 
+# Importer la configuration centralisée
+from config import REPO_URL, DEPENDENCIES, DEFAULT_PATHS, INFO_MESSAGES, DEFAULT_TRAINING
+
 # Import des modules personnalisés
 from data_preparation import DataPreparation
 from model_training import ModelTrainer
 from model_evaluation import ModelEvaluator
 from utils import setup_environment, fix_numpy_issue
-from pytorch_fix import fix_pytorch_compatibility
+# Le fix PyTorch n'est plus nécessaire car il est intégré dans le dépôt forké
+# from pytorch_fix import fix_pytorch_compatibility
 
 def parse_args():
     """Parse les arguments de ligne de commande"""
@@ -45,10 +49,10 @@ def main():
     args = parse_args()
     
     # Configuration de base
-    root_dir = '/content'
-    yolo_dir = f'{root_dir}/yolov5-face'
-    data_dir = f'{yolo_dir}/data/widerface'
-    drive_dataset_path = '/content/drive/MyDrive/dataset'
+    root_dir = DEFAULT_PATHS["root_dir"]
+    yolo_dir = DEFAULT_PATHS["yolo_dir"]
+    data_dir = DEFAULT_PATHS["data_dir"]
+    drive_dataset_path = DEFAULT_PATHS["drive_dataset_path"]
     
     start_time = time.time()
     
@@ -71,24 +75,9 @@ def main():
     # Étape 3: Corriger les problèmes connus
     fix_numpy_issue(yolo_dir)
     
-    # Étape 3.1: Appliquer le patch pour PyTorch 2.6+
-    print("\n=== Application du patch pour PyTorch 2.6+ ===")
-    # Utilisation du script de correction PyTorch optimisé
-    patch_success = fix_pytorch_compatibility()
-    
-    if not patch_success:
-        print("⚠️ ATTENTION: Le patch pour PyTorch 2.6+ n'a pas pu être appliqué!")
-        print("Vous devez corriger manuellement le fichier train.py avant de continuer:")
-        print("1. Ouvrez le fichier " + os.path.join(yolo_dir, 'train.py'))
-        print("2. Trouvez la ligne: torch.load(weights, map_location=device)")
-        print("3. Remplacez-la par: torch.load(weights, map_location=device, weights_only=False)")
-        print("4. Enregistrez le fichier et relancez le script")
-        
-        # Demander à l'utilisateur s'il souhaite continuer malgré l'échec du patch
-        user_input = input("\nSouhaitez-vous continuer malgré tout? (oui/non): ")
-        if user_input.lower() not in ['oui', 'o', 'yes', 'y']:
-            print("\nExécution arrêtée par l'utilisateur.")
-            return False
+    # Le patch PyTorch 2.6+ est déjà intégré dans le dépôt forké
+    print("\n=== Vérification de la compatibilité PyTorch ===")
+    print(INFO_MESSAGES["pytorch_fix"])
     
     # Étape 4: Entraînement du modèle
     if not args.skip_train:

@@ -15,6 +15,9 @@ import yaml
 from google.colab import drive
 from pathlib import Path
 
+# Importer la configuration centralisée
+from config import DEFAULT_PATHS
+
 class DataPreparation:
     """Classe pour gérer la préparation des données pour YOLOv5-Face"""
     

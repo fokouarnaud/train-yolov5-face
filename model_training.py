@@ -8,6 +8,9 @@ import os
 import subprocess
 import yaml
 
+# Importer la configuration centralisée
+from config import DEFAULT_TRAINING, DEFAULT_PATHS
+
 class ModelTrainer:
     """Classe pour gérer l'entraînement du modèle YOLOv5-Face"""
     

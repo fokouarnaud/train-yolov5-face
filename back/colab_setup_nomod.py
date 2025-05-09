@@ -10,9 +10,6 @@ import sys
 import subprocess
 import argparse
 
-# Importer la configuration centralisée
-from config import REPO_URL, DEPENDENCIES, DEFAULT_PATHS, INFO_MESSAGES
-
 def setup_environment(model_size='s', yolo_version='5.0'):
     """
     Configure l'environnement Colab pour l'entraînement
@@ -30,7 +27,7 @@ def setup_environment(model_size='s', yolo_version='5.0'):
     if not os.path.exists(yolo_dir):
         print("=== Clonage du dépôt YOLOv5-Face ===")
         # Utiliser le dépôt forké avec les corrections déjà appliquées
-        subprocess.run(['git', 'clone', REPO_URL, yolo_dir], check=True)
+        subprocess.run(['git', 'clone', 'https://github.com/fokouarnaud/yolov5-face.git', yolo_dir], check=True)
     
     # 3. Créer le répertoire des poids
     weights_dir = os.path.join(yolo_dir, 'weights')
@@ -51,9 +48,9 @@ def setup_environment(model_size='s', yolo_version='5.0'):
         else:
             print(f"✓ Poids yolov5{size}.pt déjà présents")
     
-    # 5. Vérification de la compatibilité PyTorch 2.6+
+    # 5. Vérification de la compatibilité PyTorch 2.6+ (sans modification)
     print("=== Vérification de la compatibilité PyTorch 2.6+ ===")
-    print(INFO_MESSAGES["pytorch_fix"])
+    print("✓ Le dépôt forké inclut déjà les corrections nécessaires pour PyTorch 2.6+")
     print("✓ Aucune modification du code n'est nécessaire")
     
     # 6. Ajouter le répertoire courant au PYTHONPATH

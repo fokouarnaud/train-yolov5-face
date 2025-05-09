@@ -9,6 +9,9 @@ import subprocess
 import traceback
 from pathlib import Path
 
+# Importer la configuration centralisée
+from config import DEFAULT_PATHS
+
 class ModelEvaluator:
     """Classe pour gérer l'évaluation et l'exportation du modèle YOLOv5-Face"""
     
