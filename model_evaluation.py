@@ -92,8 +92,8 @@ class ModelEvaluator:
             export_cmd = [
                 'python', f'{self.yolo_dir}/export.py',
                 '--weights', self.weights_path,
-                '--img', str(self.img_size),
-                '--batch-size', '1',
+                '--img_size', str(self.img_size),
+                '--batch_size', '1',
                 '--dynamic'
             ]
             
@@ -111,7 +111,7 @@ class ModelEvaluator:
         print("Exécution de la détection sur l'ensemble de validation...")
         
         detect_cmd = [
-            'python', f'{self.yolo_dir}/detect.py',
+            'python', f'{self.yolo_dir}/detect_face.py',
             '--weights', self.weights_path,
             '--source', f'{self.data_dir}/val/images',
             '--img', str(self.img_size),
