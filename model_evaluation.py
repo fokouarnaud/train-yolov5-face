@@ -114,12 +114,14 @@ class ModelEvaluator:
             'python', f'{self.yolo_dir}/detect_face.py',
             '--weights', self.weights_path,
             '--source', f'{self.data_dir}/val/images',
-            '--img', str(self.img_size),
-            '--conf', '0.001',
-            '--save-txt',
-            '--save-conf',
-            '--output', self.predictions_dir
+            '--img-size', str(self.img_size),
+            '--project', self.predictions_dir,
+            '--name', 'val',
+            '--exist-ok',
+            '--save-img'
         ]
+        
+        # Note: detect_face.py ne génère pas de fichiers .txt, nous utilisons --save-img pour obtenir les images
         
         subprocess.run(detect_cmd, check=True)
         print("✓ Détection terminée sur l'ensemble de validation")
