@@ -87,15 +87,15 @@ gensim==4.3.3"""  # Spécifier la version exacte de gensim
     print("✓ Fichier requirements.txt créé")
 
 def fix_numpy_issue(yolo_dir):
-    """Corrige les problèmes d'API obsolètes de NumPy (np.int et np.float) dans les fichiers du projet
+    """Affiche des instructions pour corriger les problèmes d'API obsolètes de NumPy
     
     Args:
         yolo_dir (str): Répertoire de YOLOv5-Face
         
     Returns:
-        bool: True si la correction a réussi, False sinon
+        bool: True toujours (fonction informative uniquement)
     """
-    print("\n=== Correction des erreurs de NumPy API ===\n")
+    print("\n=== Instructions pour corriger les erreurs de NumPy API ===\n")
     
     # Liste des fichiers critiques connus pour causer des problèmes
     critical_files = [
@@ -103,191 +103,16 @@ def fix_numpy_issue(yolo_dir):
         os.path.join(yolo_dir, 'widerface_evaluate', 'box_overlaps.pyx')
     ]
     
-    try:
-        fixed_files = 0
-        
-        # 1. Corriger d'abord les fichiers critiques avec une méthode directe
-        for file_path in critical_files:
-            if os.path.exists(file_path):
-                print(f"✓ Traitement du fichier critique: {os.path.relpath(file_path, yolo_dir)}")
-                
-                try:
-                    # Lire le contenu du fichier
-                    with open(file_path, 'r') as f:
-                        content = f.read()
-                    
-                    # Rechercher spécifiquement les lignes problématiques (np.int et np.float)
-                    modified = False
-                    modified_content = content
-                    
-                    # Corriger np.int
-                    if 'np.int' in content:
-                        # Corriger avec une expression régulière pour cibler uniquement np.int isolé
-                        modified_content = re.sub(r'np\.int\b', 'np.int32', modified_content)
-                        modified = True
-                    
-                    # Corriger np.float
-                    if 'np.float' in content:
-                        # Corriger avec une expression régulière pour cibler uniquement np.float isolé
-                        modified_content = re.sub(r'np\.float\b', 'np.float64', modified_content)
-                        modified = True
-                        
-                    # Si le contenu a été modifié
-                    if modified_content != content:
-                        # Sauvegarder le fichier modifié
-                        with open(file_path, 'w') as f:
-                            f.write(modified_content)
-                        
-                        print(f"✅ Correction effectuée dans {os.path.relpath(file_path, yolo_dir)}")
-                        fixed_files += 1
-                    else:
-                        print(f"⚠️ Aucune modification n'a été apportée à {os.path.relpath(file_path, yolo_dir)}")
-                        
-                        # Rechercher et rapporter les lignes problématiques
-                        lines = content.split('\n')
-                        for i, line in enumerate(lines):
-                            if 'np.int' in line:
-                                print(f"    Ligne {i+1} (np.int): {line.strip()}")
-                            if 'np.float' in line:
-                                print(f"    Ligne {i+1} (np.float): {line.strip()}")
-                            
-                        # Corrections manuelles pour des cas connus
-                        if "bi = np.floor(np.arange(n) / batch_size).astype(np.int)" in content:
-                            modified_content = content.replace(
-                                "bi = np.floor(np.arange(n) / batch_size).astype(np.int)",
-                                "bi = np.floor(np.arange(n) / batch_size).astype(np.int32)"
-                            )
-                            with open(file_path, 'w') as f:
-                                f.write(modified_content)
-                            print(f"✅ Correction manuelle effectuée pour np.int")
-                            fixed_files += 1
-                            
-                        # Correction manuelle pour np.float dans box_overlaps.pyx
-                        if "DTYPE = np.float" in content:
-                            modified_content = content.replace(
-                                "DTYPE = np.float",
-                                "DTYPE = np.float64"
-                            )
-                            with open(file_path, 'w') as f:
-                                f.write(modified_content)
-                            print(f"✅ Correction manuelle effectuée pour np.float")
-                            fixed_files += 1
-                except Exception as e:
-                    print(f"✗ Erreur lors de la correction de {file_path}: {e}")
-                    
-                    # Tentative de correction avec une méthode alternative
-                    try:
-                        # Tenter une correction avec sed (sur les systèmes Unix)
-                        subprocess.run(['sed', '-i', 's/np.int/np.int32/g', file_path], check=False)
-                        subprocess.run(['sed', '-i', 's/np.float/np.float64/g', file_path], check=False)
-                        print(f"✓ Tentative de correction avec sed pour {os.path.relpath(file_path, yolo_dir)}")
-                    except Exception:
-                        pass
-            else:
-                print(f"✗ Fichier critique non trouvé: {os.path.relpath(file_path, yolo_dir)}")
-        
-        # 2. Recherche récursive de tous les autres fichiers Python pouvant contenir np.int
-        for root, dirs, files in os.walk(yolo_dir):
-            for file in files:
-                if file.endswith('.py'):
-                    file_path = os.path.join(root, file)
-                    
-                    # Ignorer les fichiers déjà traités
-                    if file_path in critical_files:
-                        continue
-                    
-                    try:
-                        # Lire le contenu du fichier
-                        with open(file_path, 'r') as f:
-                            content = f.read()
-                        
-                        # Vérifier si le fichier contient np.int ou np.float
-                        has_np_int = "np.int" in content and not "np.int32" in content and not "np.int64" in content
-                        has_np_float = "np.float" in content and not "np.float32" in content and not "np.float64" in content
-                        
-                        if has_np_int or has_np_float:
-                            # Appliquer les corrections nécessaires
-                            modified_content = content
-                            
-                            if has_np_int:
-                                modified_content = re.sub(r'np\.int\b', 'np.int32', modified_content)
-                                
-                            if has_np_float:
-                                modified_content = re.sub(r'np\.float\b', 'np.float64', modified_content)
-                            
-                            # Sauvegarder le fichier modifié
-                            with open(file_path, 'w') as f:
-                                f.write(modified_content)
-                            
-                            print(f"✓ Correction effectuée dans {os.path.relpath(file_path, yolo_dir)}")
-                            fixed_files += 1
-                    except Exception as file_error:
-                        print(f"✗ Erreur lors de la vérification de {file_path}: {file_error}")
-        
-        # 3. Vérification finale des fichiers critiques
-        for file_path in critical_files:
-            if os.path.exists(file_path):
-                with open(file_path, 'r') as f:
-                    content = f.read()
-                
-                # Vérifier spécifiquement si des problèmes persistent
-                has_np_int = "np.int" in content and not "np.int32" in content and not "np.int64" in content
-                has_np_float = "np.float" in content and not "np.float32" in content and not "np.float64" in content
-                
-                if has_np_int or has_np_float:
-                    if has_np_int:
-                        print(f"\n❌ AVERTISSEMENT: Le fichier {os.path.relpath(file_path, yolo_dir)} contient encore np.int!")
-                    if has_np_float:
-                        print(f"\n❌ AVERTISSEMENT: Le fichier {os.path.relpath(file_path, yolo_dir)} contient encore np.float!")
-                    print("Tentative de correction directe avec un remplacement forcé:")
-                    
-                    # Utiliser une méthode plus radicale avec un motif très spécifique
-                    with open(file_path, 'r') as f:
-                        lines = f.readlines()
-                    
-                    # Trouver et corriger les lignes spécifiques
-                    for i, line in enumerate(lines):
-                        if has_np_int and "np.int" in line:
-                            if ".astype(np.int)" in line:
-                                lines[i] = line.replace(".astype(np.int)", ".astype(np.int32)")
-                                print(f"✅ Ligne {i+1} corrigée (np.int): {lines[i].strip()}")
-                            elif "DTYPE = np.int" in line or "dtype=np.int" in line:
-                                lines[i] = line.replace("np.int", "np.int32")
-                                print(f"✅ Ligne {i+1} corrigée (np.int): {lines[i].strip()}")
-                                
-                        if has_np_float and "np.float" in line:
-                            if ".astype(np.float)" in line:
-                                lines[i] = line.replace(".astype(np.float)", ".astype(np.float64)")
-                                print(f"✅ Ligne {i+1} corrigée (np.float): {lines[i].strip()}")
-                            elif "DTYPE = np.float" in line or "dtype=np.float" in line:
-                                lines[i] = line.replace("np.float", "np.float64")
-                                print(f"✅ Ligne {i+1} corrigée (np.float): {lines[i].strip()}")
-                    
-                    # Sauvegarder le fichier modifié
-                    with open(file_path, 'w') as f:
-                        f.writelines(lines)
-                    
-                    # Vérifier que la correction a bien été appliquée
-                    with open(file_path, 'r') as f:
-                        new_content = f.read()
-                    
-                    still_has_np_int = "np.int" in new_content and "np.int32" not in new_content and "np.int64" not in new_content
-                    still_has_np_float = "np.float" in new_content and "np.float32" not in new_content and "np.float64" not in new_content
-                    
-                    if still_has_np_int:
-                        print(f"❌ La correction de np.int a échoué. Veuillez corriger manuellement le fichier {os.path.relpath(file_path, yolo_dir)}")
-                        
-                    if still_has_np_float:
-                        print(f"❌ La correction de np.float a échoué. Veuillez corriger manuellement le fichier {os.path.relpath(file_path, yolo_dir)}")
-        
-        if fixed_files > 0:
-            print(f"\n✅ {fixed_files} fichiers corrigés avec succès")
-        else:
-            print("\n✅ Aucune correction nécessaire, tous les fichiers sont déjà compatibles")
-        
-        return True
-        
-    except Exception as e:
-        print(f"✗ Erreur lors de la correction des erreurs NumPy: {e}")
-        print(traceback.format_exc())
-        return False
+    print("Pour que le code fonctionne avec NumPy 1.26+, vous devez avoir modifié manuellement ces fichiers:")
+    print("\n1. box_overlaps.pyx (dans widerface_evaluate/)")
+    print("   - Remplacer np.int par np.int64")
+    print("   - Remplacer np.int_t par np.int64_t")
+    print("   - Remplacer np.float par np.float64")
+    print("\n2. utils/face_datasets.py")
+    print("   - Remplacer .astype(np.int) par .astype(np.int32)")
+    print("   - Remplacer np.float par np.float64")
+    
+    print("\nSi ces modifications n'ont pas été faites dans votre repo local, ")
+    print("vous pourriez rencontrer des erreurs avec NumPy 1.26+ et Python 3.11.")
+    
+    return True
