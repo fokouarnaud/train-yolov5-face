@@ -37,6 +37,9 @@ def setup_environment(yolo_dir):
         
         # Cloner le dépôt YOLOv5-Face
         print("Clonage du dépôt YOLOv5-Face...")
+        print(f"Utilisation du dépôt forké: {REPO_URL}")
+        print("Ce dépôt inclut les corrections pour PyTorch 2.6+ et NumPy 1.26+,")
+        print("ainsi que le support pour les modèles ultra-légers (n-0.5, n) avec ShuffleNetV2")
         subprocess.run(['git', 'clone', REPO_URL, yolo_dir], check=True)
         
         # Aller dans le répertoire YOLOv5-Face
@@ -96,6 +99,7 @@ def fix_numpy_issue(yolo_dir):
         bool: True toujours (fonction informative uniquement)
     """
     print("\n=== Instructions pour corriger les erreurs de NumPy API ===\n")
+    print(INFO_MESSAGES["numpy_fix"])
     
     # Liste des fichiers critiques connus pour causer des problèmes
     critical_files = [
@@ -103,7 +107,8 @@ def fix_numpy_issue(yolo_dir):
         os.path.join(yolo_dir, 'widerface_evaluate', 'box_overlaps.pyx')
     ]
     
-    print("Pour que le code fonctionne avec NumPy 1.26+, vous devez avoir modifié manuellement ces fichiers:")
+    print("\nLes corrections ont été intégrées dans le dépôt forké, mais si vous utilisez le dépôt original,")
+    print("vous devrez corriger ces fichiers manuellement pour NumPy 1.26+ et Python 3.11:")
     print("\n1. box_overlaps.pyx (dans widerface_evaluate/)")
     print("   - Remplacer np.int par np.int64")
     print("   - Remplacer np.int_t par np.int64_t")
@@ -111,8 +116,5 @@ def fix_numpy_issue(yolo_dir):
     print("\n2. utils/face_datasets.py")
     print("   - Remplacer .astype(np.int) par .astype(np.int32)")
     print("   - Remplacer np.float par np.float64")
-    
-    print("\nSi ces modifications n'ont pas été faites dans votre repo local, ")
-    print("vous pourriez rencontrer des erreurs avec NumPy 1.26+ et Python 3.11.")
     
     return True

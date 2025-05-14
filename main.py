@@ -25,15 +25,15 @@ def parse_args():
     """Parse les arguments de ligne de commande"""
     parser = argparse.ArgumentParser(description='YOLOv5-Face Training Pipeline')
     
-    parser.add_argument('--batch-size', type=int, default=32, 
+    parser.add_argument('--batch-size', type=int, default=DEFAULT_TRAINING["batch_size"], 
                         help='Taille du batch pour l\'entraînement')
-    parser.add_argument('--epochs', type=int, default=300, 
+    parser.add_argument('--epochs', type=int, default=DEFAULT_TRAINING["epochs"], 
                         help='Nombre d\'epochs d\'entraînement')
-    parser.add_argument('--img-size', type=int, default=640, 
+    parser.add_argument('--img-size', type=int, default=DEFAULT_TRAINING["img_size"], 
                         help='Taille d\'image pour l\'entraînement')
-    parser.add_argument('--model-size', type=str, default='s', choices=['n-0.5', 'n', 'n6', 's', 'm', 'l', 'x'],
-                        help='Taille du modèle YOLOv5 (n-0.5, n, n6, s, m, l, x)')
-    parser.add_argument('--yolo-version', type=str, default='5.0',
+    parser.add_argument('--model-size', type=str, default=DEFAULT_TRAINING["model_size"], choices=['n-0.5', 'n', 's', 's6', 'm', 'm6', 'l', 'l6', 'x', 'x6'],
+                        help='Taille du modèle YOLOv5 (n-0.5, n, s, s6, m, m6, l, l6, x, x6)')
+    parser.add_argument('--yolo-version', type=str, default=DEFAULT_TRAINING["yolo_version"],
                         help='Version de YOLOv5 (par exemple 5.0)')
     parser.add_argument('--skip-train', action='store_true',
                         help='Ignorer l\'étape d\'entraînement')

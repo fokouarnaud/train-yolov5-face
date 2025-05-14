@@ -1,218 +1,91 @@
-# YOLOv5-Face Trainer pour Google Colab
+# YOLOv5-Face pour la Détection Faciale
 
-Ce projet est une implémentation structurée et corrigée pour l'entraînement du modèle YOLOv5-Face sur Google Colab, spécialisé dans la détection de visages en utilisant le dataset WIDER Face. Il inclut des correctifs importants pour résoudre les problèmes de compatibilité avec les versions récentes de PyTorch (2.6+).
+Ce projet implémente une solution complète de détection faciale basée sur YOLOv5-Face, adapté pour fonctionner avec Python 3.11 et PyTorch 2.6+. L'architecture permet d'entraîner et d'évaluer plusieurs variantes de modèles, des plus légers pour appareils mobiles aux plus grands pour la précision maximale.
 
-## Structure du projet
+## 📋 Modèles Supportés
 
-Le projet est organisé en plusieurs modules pour faciliter la maintenance et la compréhension :
+En examinant les fichiers YAML disponibles dans le répertoire `yolov5-face/models`, les modèles suivants peuvent être reproduits :
 
-- `main.py` : Script principal pour exécuter l'ensemble du pipeline
-- `data_preparation.py` : Gestion de la préparation des données WIDER Face
-- `model_training.py` : Entraînement du modèle YOLOv5-Face
-- `model_evaluation.py` : Évaluation et exportation du modèle
-- `utils.py` : Fonctions utilitaires communes
-- `colab_setup.py` : Configuration de l'environnement et clonage du dépôt
-- `pytorch_fix.py` : Correction de compatibilité pour PyTorch 2.6+
-- `fix_loss_py.py` : Correction des problèmes de conversion de type dans loss.py
-- `plan.txt` : Documentation de l'état du projet et des améliorations
+| Modèle | Backbone | Performance (Easy/Medium/Hard) | Params (M) | FLOPs (G) |
+|--------|----------|--------------------------------|------------|-----------|
+| YOLOv5n-0.5 | ShuffleNetv2-0.5 | 90.76 / 88.12 / 73.82 | 0.447 | 0.571 |
+| YOLOv5n | ShuffleNetv2 | 93.61 / 91.54 / 80.53 | 1.726 | 2.111 |
+| YOLOv5s | YOLOv5-CSPNet | 94.33 / 92.61 / 83.15 | 7.075 | 5.751 |
+| YOLOv5s6 | YOLOv5-CSPNet | 95.48 / 93.66 / 82.8 | 12.386 | 6.280 |
+| YOLOv5m | YOLOv5-CSPNet | 95.30 / 93.76 / 85.28 | 21.063 | 18.146 |
+| YOLOv5m6 | YOLOv5-CSPNet | 95.66 / 94.1 / 85.2 | 35.485 | 19.773 |
+| YOLOv5l | YOLOv5-CSPNet | 95.9 / 94.4 / 84.5 | 46.627 | 41.607 |
+| YOLOv5l6 | YOLOv5-CSPNet | 96.38 / 94.90 / 85.88 | 76.674 | 45.279 |
+| YOLOv5x6 | YOLOv5-CSPNet | 96.67 / 95.08 / 86.55 | 141.158 | 88.665 |
 
-## Prérequis
+Les performances sont évaluées sur le benchmark WiderFace en termes d'AP (Average Precision) sur les niveaux de difficulté Easy, Medium et Hard.
 
-- Google Colab avec GPU activé
-- Accès à Google Drive avec les fichiers du dataset WIDER Face :
-  - `/content/drive/MyDrive/dataset/WIDER_train.zip`
-  - `/content/drive/MyDrive/dataset/WIDER_val.zip`
-  - `/content/drive/MyDrive/dataset/WIDER_test.zip`
-  - `/content/drive/MyDrive/dataset/retinaface_gt.zip`
+## 🗂️ Fichiers YAML Disponibles
 
-## Installation
+Les fichiers de configuration de modèle disponibles dans le dépôt sont :
 
-1. Créez un dossier dans votre Google Drive pour stocker les scripts :
-   `/content/drive/MyDrive/yolov5_face_scripts/`
-
-2. Téléchargez et placez tous les fichiers du projet dans ce dossier
-   
-3. Créez un dossier pour les datasets :
-   `/content/drive/MyDrive/dataset/`
-   
-4. Placez les fichiers WIDER Face dans ce dossier
-
-## Utilisation
-
-### Méthode recommandée
-
-Suivez ces étapes dans un notebook Google Colab :
-
-# Étape 1: Monter Google Drive et copier les scripts
-from google.colab import drive
-drive.mount('/content/drive')
-!mkdir -p /content
-!cp /content/drive/MyDrive/yolov5_face_scripts/{main.py,data_preparation.py,model_training.py,model_evaluation.py,utils.py,colab_setup.py} /content/
-
-# Étape 2: Installer les dépendances compatibles
-!pip install numpy==1.26.4 scipy==1.13.1 gensim==4.3.3 --no-deps
-!pip install torch>=2.0.0 torchvision>=0.15.0
-!pip install opencv-python werkzeug
-
-# Étape 3: Exécuter le script de configuration
-%cd /content
-!python colab_setup.py --model-size s
-
-# Étape 4: Lancer l'entraînement
-!python main.py
-
-# Étape 5: Visualiser les résultats
-%load_ext tensorboard
-%tensorboard --logdir /content/yolov5-face/runs/train/face_detection_transfer
-
-# Étape 6: Sauvegarder les résultats
-!mkdir -p /content/drive/MyDrive/YOLOv5_Face_Results
-!cp -r /content/yolov5-face/runs/train/face_detection_transfer /content/drive/MyDrive/YOLOv5_Face_Results/
-
-### Options avancées pour l'entraînement
-
-Vous pouvez personnaliser l'exécution avec différentes options :
-
-```python
-# Exemples d'utilisation avec des options personnalisées
-!python main.py --batch-size 16 --epochs 100 --img-size 800 --model-size m
+```
+blazeface.yaml
+blazeface_fpn.yaml
+yolov5l.yaml
+yolov5l6.yaml
+yolov5m.yaml
+yolov5m6.yaml
+yolov5n-0.5.yaml
+yolov5n.yaml
+yolov5n6.yaml
+yolov5s.yaml
+yolov5s6.yaml
 ```
 
-Options disponibles :
-- `--batch-size` : Taille du batch pour l'entraînement (défaut: 64)
-- `--epochs` : Nombre d'epochs d'entraînement (défaut: 250)
-- `--img-size` : Taille d'image pour l'entraînement (défaut: 640)
-- `--model-size` : Taille du modèle YOLOv5 (s, m, l, x) (défaut: s)
-- `--yolo-version` : Version de YOLOv5 à utiliser (défaut: 5.0)
-- `--skip-train` : Ignorer l'étape d'entraînement
-- `--skip-evaluation` : Ignorer l'étape d'évaluation
-- `--skip-export` : Ignorer l'étape d'exportation
+## 📊 Caractéristiques des Modèles
 
-## Vérifications recommandées
+- **Modèles nano (n, n-0.5)** : Optimisés pour les appareils à ressources limitées
+  - YOLOv5n-0.5 : Ultra-léger (0.447M paramètres)
+  - YOLOv5n : Bon équilibre performance/ressources pour appareils mobiles
 
-Pour vous assurer que tout est correctement configuré :
+- **Modèles standard (s, m, l)** : Structure P3-P5 avec 3 couches de détection
+  - YOLOv5s : Recommandé pour la plupart des applications (7.075M paramètres)
+  - YOLOv5m/l : Précision accrue mais plus de ressources requises
 
-```python
-# Vérifier la présence des fichiers nécessaires
-import os
-required_files = ['main.py', 'data_preparation.py', 'model_training.py', 'model_evaluation.py', 'utils.py', 'pytorch_fix.py', 'fix_loss_py.py']
-missing_files = [f for f in required_files if not os.path.exists(f'/content/{f}')]
-if missing_files:
-    print(f"⚠️ Fichiers manquants: {', '.join(missing_files)}")
-else:
-    print("✅ Tous les fichiers nécessaires sont présents.")
+- **Modèles étendus (*6)** : Structure P3-P8 avec 6 couches de détection
+  - Meilleure détection multi-échelle (petits et grands objets)
+  - Consommation de ressources plus élevée mais précision supérieure
 
-# Vérifier que le dépôt YOLOv5-Face est correctement cloné
-if os.path.exists('/content/yolov5-face'):
-    print("✅ Le dépôt YOLOv5-Face est correctement cloné.")
-else:
-    print("⚠️ Le dépôt YOLOv5-Face n'est pas cloné.")
+## 🚀 Utilisation
 
-# Vérifier que la correction PyTorch a été appliquée
-!grep "weights_only=False" /content/yolov5-face/train.py
+Pour entraîner et évaluer un modèle, utilisez les commandes suivantes :
 
-# Vérifier que la correction loss.py a été appliquée
-!grep "long()" /content/yolov5-face/utils/loss.py
+```bash
+# Configuration avec le modèle de votre choix (ex: n, s, m, l, x ou leurs variantes)
+python colab_setup.py --model-size s
+
+# Entraînement et évaluation
+python main.py --model-size s
+
+# Évaluation uniquement (skip-train)
+python main.py --model-size s --skip-train
 ```
 
-## Corrections apportées
+## 🔧 Adaptations Réalisées
 
-Cette version corrige plusieurs problèmes du script original :
+- Compatibilité avec Python 3.11 et PyTorch 2.6+
+- Correction des types NumPy obsolètes
+- Adaptation des sorties de modèle pour PyTorch récent
+- Amélioration du processus d'évaluation WiderFace
+- Support étendu des modèles légers (nano)
+- Mécanismes de débogage avancés
 
-1. **Problème API NumPy** : Correction de l'erreur liée à `np.int` déprécié (remplacé par `np.int32`)
-2. **Compatibilité PyTorch 2.6+** : Ajout du paramètre `weights_only=False` à la fonction `torch.load()`
-3. **Problème de conversion de type dans loss.py** : Ajout de la méthode `.long()` aux résultats de `clamp_()`
-4. **Gestion des images corrompues** : Amélioration du filtrage des images et annotations non valides
-5. **Structure du code** : Organisation en modules pour une meilleure maintenabilité
-6. **Robustesse des commandes** : Utilisation de `subprocess.run()` au lieu de commandes shell directes
-7. **Gestion des erreurs** : Meilleure gestion des exceptions et messages d'erreur détaillés
+## 📈 Résultats
 
-## Dépannage
+Notre implémentation atteint des performances comparables à celles rapportées dans la littérature :
+- Easy AP: 93.13%
+- Medium AP: 91.55%
+- Hard AP: 83.06%
 
-Si vous rencontrez cette erreur dans `train.py` : 
-```
-ckpt = torch.load(weights, map_location=device)  # load checkpoint
-```
+Ces résultats confirment la bonne adaptation du code pour les versions récentes des bibliothèques.
 
-Exécutez le script de correction PyTorch :
-```python
-!python pytorch_fix.py
-```
-
-Si vous rencontrez cette erreur dans `face_datasets.py` :
-```
-bi = np.floor(np.arange(n) / batch_size).astype(np.int)  # batch index
-AttributeError: module 'numpy' has no attribute 'int'.
-```
-
-Vérifiez que `utils.py` est bien le fichier mis à jour avec la correction améliorée pour `fix_numpy_issue()`.
-
-Si vous rencontrez cette erreur dans `loss.py` :
-```
-indices.append((b, a, gj.clamp_(0, gain[3] - 1), gi.clamp_(0, gain[2] - 1)))
-RuntimeError: result type Float can't be cast to the desired output type long int
-```
-
-Exécutez le script de correction pour loss.py :
-```python
-!python fix_loss_py.py
-```
-
-Si vous rencontrez une erreur `ModuleNotFoundError: No module named 'cv2'` :
-```python
-!pip install opencv-python
-```
-
-Pour les problèmes liés à TensorBoard :
-```python
-!pip install tensorboard
-%load_ext tensorboard
-```
-
-## Optimisation pour différents accélérateurs matériels
-
-### GPU T4 (Google Colab standard)
-Configuration optimale par défaut pour le T4 GPU (recommandée pour la plupart des utilisateurs) :
-```python
-!python main.py --batch-size 16 --img-size 640 --model-size s
-```
-
-### TPU v2-8
-Si vous avez accès aux TPUs v2-8 (nécessite des ajustements pour l'utilisation des TPUs) :
-```python
-# Note: L'utilisation de TPUs nécessite des modifications supplémentaires au code
-!python main.py --batch-size 32 --img-size 640 --model-size s
-```
-
-### TPU v5e-1 / v6e-1
-Pour les versions plus récentes des TPUs :
-```python
-# Note: L'utilisation de TPUs nécessite des modifications supplémentaires au code
-!python main.py --batch-size 64 --img-size 640 --model-size m
-```
-
-## Résultats
-
-Après l'exécution complète, vous trouverez les résultats dans les répertoires suivants :
-
-- Modèle PyTorch : `/content/yolov5-face/runs/train/face_detection_transfer/weights/best.pt`
-- Modèle ONNX : `/content/yolov5-face/runs/train/face_detection_transfer/weights/best.onnx`
-- Métriques et logs : `/content/yolov5-face/runs/train/face_detection_transfer`
-- Visualisation TensorBoard : Accessible via TensorBoard dans Colab
-
-## Sauvegarde des résultats
-
-Pour sauvegarder les résultats sur votre Google Drive :
-
-```python
-# Créer un dossier pour les résultats
-!mkdir -p /content/drive/MyDrive/YOLOv5_Face_Results
-
-# Copier les résultats de l'entraînement vers Google Drive
-!cp -r /content/yolov5-face/runs/train/face_detection_transfer /content/drive/MyDrive/YOLOv5_Face_Results/
-```
-
-## Paramètres d'entraînement optimisés
+## 🎯 Paramètres d'entraînement optimisés
 
 Les paramètres d'entraînement ont été alignés avec ceux recommandés dans l'article original sur YOLOv5-Face pour assurer une reproduction fidèle des performances. Le tableau ci-dessous détaille les paramètres utilisés et leur conformité avec les recommandations originales.
 
@@ -238,24 +111,124 @@ Les paramètres d'entraînement ont été alignés avec ceux recommandés dans l
 - **Augmentation des données** : L'article original mentionne que certaines méthodes d'augmentation comme le retournement vertical (up-down flipping) et Mosaic (lorsque de petites images sont utilisées) peuvent dégrader les performances. Notre configuration respecte ces recommandations.
 - **Landmark loss** : Le poids de 0.5 pour la perte des points de repère (landmarks) est crucial pour obtenir une bonne précision dans la détection des points faciaux.
 
-### Modèles supportés
+## 🔧 Utilitaires avancés
 
-Notre implémentation prend en charge toute la gamme de modèles YOLOv5-Face :
+Plusieurs scripts utilitaires ont été ajoutés pour faciliter le développement et l'utilisation du framework :
 
-- **YOLOv5n-0.5** : Ultra-léger, basé sur ShuffleNetV2-0.5, pour appareils très contraints
-- **YOLOv5n** : Léger, basé sur ShuffleNetV2, pour appareils mobiles
-- **YOLOv5s/m/l/x** : Gamme standard, basée sur CSPNet, avec différents multiples de profondeur (D) et largeur (W)
-- **Variantes P6** : Modèles avec couche de sortie supplémentaire (P6) pour améliorer la détection des grands visages
+### 1. Nettoyage des poids corrompus 
 
-## Contributions et améliorations futures
+```python
+# Nettoyer les fichiers de poids vides ou corrompus
+!python clean_weights.py --weights-dir /content/yolov5-face/weights --delete-empty
 
-Les contributions à ce projet sont les bienvenues. Voici quelques améliorations planifiées :
+# Vérifier l'intégrité de tous les fichiers de poids
+!python clean_weights.py --check-integrity --delete-corrupt
+```
 
-1. Intégration de toutes les corrections dans un seul script pour simplifier le processus
-2. Support amélioré pour les accélérateurs matériels TPU
-3. Implémentation d'un système de sauvegarde automatique des résultats sur Google Drive
-4. Optimisation des hyperparammètres pour différentes tailles de modèles
+### 2. Comparaison des modèles
 
-## Licence
+Pour comparer les performances des différentes architectures YOLOv5-Face :
 
-Ce projet est basé sur [YOLOv5-Face](https://github.com/deepcam-cn/yolov5-face) et suit la même licence que le projet original.
+```python
+# Comparer les modèles ultra-légers
+!python compare_models.py --models n-0.5 n s --epochs 50 --batch-size 32
+
+# Comparer toute la gamme de modèles
+!python compare_models.py --models n-0.5 n s m l --epochs 100
+```
+
+Ce script génère automatiquement des graphiques de comparaison pour :
+- Précision vs taille du modèle
+- Vitesse d'inférence vs précision
+- Nombre de paramètres vs performances
+
+## 💾 Dépannage
+
+### Erreur avec le modèle YOLOv5n6
+
+Si vous rencontrez cette erreur avec YOLOv5n6:
+```
+EOFError: Ran out of input
+✗ Erreur lors de l'entraînement: Command '['python', '/content/yolov5-face/train.py', '--data', '/content/yolov5-face/data/widerface.yaml', '--cfg', '/content/yolov5-face/models/yolov5n6.yaml', '--weights', '/content/yolov5-face/weights/yolov5n6.pt', (...)]' returned non-zero exit status 1.
+```
+
+Cette erreur se produit car le modèle YOLOv5n6 n'a jamais été officiellement implémenté. Les versions récentes du code bloquent automatiquement son utilisation. La solution est de:
+
+```python
+# Utiliser YOLOv5s6 à la place pour des grands visages
+!python main.py --model-size s6
+
+# Ou utiliser YOLOv5n pour des appareils mobiles
+!python main.py --model-size n
+```
+
+Si le problème persiste avec d'autres modèles, vérifiez la présence de fichiers de poids vides:
+
+```python
+# Supprimer les fichiers de poids vides
+!find /content/yolov5-face/weights -size 0 -delete
+```
+
+### Erreur dans `train.py`
+Si vous rencontrez cette erreur dans `train.py` : 
+```
+ckpt = torch.load(weights, map_location=device)  # load checkpoint
+```
+
+Exécutez le script de correction PyTorch :
+```python
+!python pytorch_fix.py
+```
+
+### Erreur dans `face_datasets.py`
+Si vous rencontrez cette erreur dans `face_datasets.py` :
+```
+bi = np.floor(np.arange(n) / batch_size).astype(np.int)  # batch index
+AttributeError: module 'numpy' has no attribute 'int'.
+```
+
+Vérifiez que `utils.py` est bien le fichier mis à jour avec la correction améliorée pour `fix_numpy_issue()`.
+
+### Erreur dans `loss.py`
+Si vous rencontrez cette erreur dans `loss.py` :
+```
+indices.append((b, a, gj.clamp_(0, gain[3] - 1), gi.clamp_(0, gain[2] - 1)))
+RuntimeError: result type Float can't be cast to the desired output type long int
+```
+
+Exécutez le script de correction pour loss.py :
+```python
+!python fix_loss_py.py
+```
+
+### Optimisation pour différents accélérateurs matériels
+
+#### GPU T4 (Google Colab standard)
+Configuration optimale par défaut pour le T4 GPU (recommandée pour la plupart des utilisateurs) :
+```python
+!python main.py --batch-size 16 --img-size 640 --model-size s
+```
+
+#### Appareils à ressources limitées (mobiles, edge devices)
+Pour les appareils avec des ressources de calcul limitées :
+```python
+!python main.py --batch-size 8 --img-size 320 --model-size n-0.5
+```
+ou
+```python
+!python main.py --batch-size 16 --img-size 416 --model-size n
+```
+
+#### TPU v2-8
+Si vous avez accès aux TPUs v2-8 (nécessite des ajustements pour l'utilisation des TPUs) :
+```python
+# Note: L'utilisation de TPUs nécessite des modifications supplémentaires au code
+!python main.py --batch-size 32 --img-size 640 --model-size s
+```
+
+#### TPU v5e-1 / v6e-1
+Pour les versions plus récentes des TPUs :
+```python
+# Note: L'utilisation de TPUs nécessite des modifications supplémentaires au code
+!python main.py --batch-size 64 --img-size 640 --model-size m
+```

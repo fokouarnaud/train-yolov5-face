@@ -14,7 +14,7 @@ from config import DEFAULT_TRAINING, DEFAULT_PATHS
 class ModelTrainer:
     """Classe pour gérer l'entraînement du modèle YOLOv5-Face"""
     
-    def __init__(self, yolo_dir, data_dir, batch_size=32, epochs=300, img_size=640, model_size='s', yolo_version='5.0'):
+    def __init__(self, yolo_dir, data_dir, batch_size=DEFAULT_TRAINING["batch_size"], epochs=DEFAULT_TRAINING["epochs"], img_size=DEFAULT_TRAINING["img_size"], model_size=DEFAULT_TRAINING["model_size"], yolo_version=DEFAULT_TRAINING["yolo_version"]):
         """Initialise la classe d'entraînement du modèle
         
         Args:
@@ -23,7 +23,10 @@ class ModelTrainer:
             batch_size (int): Taille du batch pour l'entraînement
             epochs (int): Nombre d'epochs d'entraînement
             img_size (int): Taille d'image pour l'entraînement
-            model_size (str): Taille du modèle YOLOv5 (n-0.5, n, n6, s, m, l, x)
+            model_size (str): Taille du modèle YOLOv5 (n-0.5, n, s, s6, m, m6, l, l6, x, x6)
+                             Les modèles n-0.5 et n sont des modèles ultra-légers basés sur ShuffleNetV2
+                             Les modèles avec suffixe '6' incluent un bloc de sortie P6 pour améliorer
+                             la détection des grands visages
         """
         self.yolo_dir = yolo_dir
         self.data_dir = data_dir
@@ -34,7 +37,13 @@ class ModelTrainer:
         self.yolo_version = yolo_version
     
     def download_weights(self):
-        """Télécharge les poids pré-entraînés pour le modèle YOLOv5"""
+        """Télécharge les poids pré-entraînés pour le modèle YOLOv5
+        
+        Notes:
+            - Les modèles ultra-légers n-0.5 et n sont spécifiques à YOLOv5-Face et utilisent ShuffleNetV2
+            - Les modèles standards (s, m, l, x) utilisent CSPNet comme backbone
+            - Les variantes avec suffixe '6' incluent un bloc de sortie P6 pour les grands visages
+        """
         print("\n=== Téléchargement des poids pré-entraînés ===")
         
         # Chemin du répertoire des poids
@@ -53,7 +62,15 @@ class ModelTrainer:
             print(f"✓ Poids téléchargés: {weights_path}")
         except subprocess.CalledProcessError:
             print(f"✗ Erreur lors du téléchargement des poids depuis {weights_url}")
-            print("Certaines variantes peuvent ne pas être disponibles dans les versions officielles.")
+            if self.model_size in ['n-0.5', 'n']:
+                print(f"Les modèles YOLOv5{self.model_size} sont des modèles ultra-légers spécifiques à YOLOv5-Face.")
+                print(f"Ces modèles utilisent l'architecture ShuffleNetV2 et sont optimisés pour les appareils mobiles.")
+            elif self.model_size.endswith('6'):
+                print(f"Le modèle YOLOv5{self.model_size} inclut un bloc de sortie P6 pour améliorer la détection des grands visages.")
+                if self.model_size == 'n6':
+                    print(f"ATTENTION: Le modèle YOLOv5n6 n'est pas officiellement supporté. Utilisez YOLOv5s6 à la place.")
+            else:
+                print("Certaines variantes peuvent ne pas être disponibles dans les versions officielles.")
             print("L'entraînement continuera sans poids pré-entraînés ou avec des poids aléatoires.")
     
     def train(self):
@@ -62,6 +79,13 @@ class ModelTrainer:
         Returns:
             bool: True si l'entraînement a réussi, False sinon
         """
+        # Bloquer complètement l'utilisation de n6 qui n'est pas officiellement supporté
+        if self.model_size == 'n6':
+            print("⚠️ Le modèle YOLOv5n6 n'est pas officiellement supporté et provoque des erreurs")
+            print("Utilisez plutôt YOLOv5s6 pour la détection des grands visages")
+            print("→ Vous pouvez relancer avec --model-size s6")
+            return False
+            
         # Télécharger les poids pré-entraînés
         self.download_weights()
         
@@ -84,7 +108,13 @@ class ModelTrainer:
         # Pour les poids, nous pouvons continuer même s'ils ne sont pas trouvés (entraînement à partir de zéro)
         weights_arg = ''
         if os.path.exists(weights_path):
-            weights_arg = weights_path
+            # Vérifier que le fichier n'est pas vide
+            if os.path.getsize(weights_path) > 0:
+                weights_arg = weights_path
+            else:
+                print(f"⚠️ Fichier de poids vide détecté: {weights_path}")
+                print("  Ce fichier sera supprimé et l'entraînement commencera à partir de poids aléatoires")
+                os.remove(weights_path)  # Supprimer le fichier vide pour éviter les erreurs futures
         else:
             print(f"⚠️ Fichier de poids non trouvé: {weights_path}")
             print("  L'entraînement commencera à partir de poids aléatoires")

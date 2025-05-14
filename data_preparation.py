@@ -339,6 +339,31 @@ class DataPreparation:
             
             corrupted_count = 0
             fixed_count = 0
+            corrupted_images = 0
+            
+            # Vérifier d'abord les images corrompues
+            print(f"Vérification des images corrompues dans {set_name}...")
+            for root, _, files in os.walk(images_dir):
+                for file in files:
+                    if file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
+                        image_path = os.path.join(root, file)
+                        try:
+                            img = cv2.imread(image_path)
+                            if img is None:
+                                corrupted_images += 1
+                                # Supprimer l'image corrompue
+                                os.remove(image_path)
+                                # Supprimer l'annotation correspondante si elle existe
+                                label_name = os.path.splitext(file)[0] + '.txt'
+                                label_path = os.path.join(labels_dir, os.path.relpath(root, images_dir), label_name)
+                                if os.path.exists(label_path):
+                                    os.remove(label_path)
+                        except Exception:
+                            corrupted_images += 1
+                            # Supprimer l'image corrompue
+                            os.remove(image_path)
+            
+            print(f"Images corrompues supprimées dans {set_name}: {corrupted_images}")
             
             # Parcourir tous les fichiers d'étiquettes
             for root, _, files in os.walk(labels_dir):
