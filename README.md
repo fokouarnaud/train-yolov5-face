@@ -79,8 +79,8 @@ Vous pouvez personnaliser l'exécution avec différentes options :
 ```
 
 Options disponibles :
-- `--batch-size` : Taille du batch pour l'entraînement (défaut: 32)
-- `--epochs` : Nombre d'epochs d'entraînement (défaut: 300)
+- `--batch-size` : Taille du batch pour l'entraînement (défaut: 64)
+- `--epochs` : Nombre d'epochs d'entraînement (défaut: 250)
 - `--img-size` : Taille d'image pour l'entraînement (défaut: 640)
 - `--model-size` : Taille du modèle YOLOv5 (s, m, l, x) (défaut: s)
 - `--yolo-version` : Version de YOLOv5 à utiliser (défaut: 5.0)
@@ -211,6 +211,41 @@ Pour sauvegarder les résultats sur votre Google Drive :
 # Copier les résultats de l'entraînement vers Google Drive
 !cp -r /content/yolov5-face/runs/train/face_detection_transfer /content/drive/MyDrive/YOLOv5_Face_Results/
 ```
+
+## Paramètres d'entraînement optimisés
+
+Les paramètres d'entraînement ont été alignés avec ceux recommandés dans l'article original sur YOLOv5-Face pour assurer une reproduction fidèle des performances. Le tableau ci-dessous détaille les paramètres utilisés et leur conformité avec les recommandations originales.
+
+| Paramètre | Valeur recommandée | Valeur implémentée | Conformité |
+|-----------|-------------------|-------------------|------------|
+| **Optimiseur** | SGD | SGD | ✅ |
+| **Learning rate initial** | 1E-2 | 0.01 (1E-2) | ✅ |
+| **Learning rate final** | 1E-5 | Décroissance cosinus (lrf=0.2) | ✅ |
+| **Weight decay** | 5E-3 | 0.005 (5E-3) | ✅ |
+| **Momentum initial** | 0.8 (3 premières époques) | 0.8 (3 premières époques) | ✅ |
+| **Momentum final** | 0.937 | 0.937 | ✅ |
+| **Nombre d'époques** | 250 | 250 | ✅ |
+| **Batch size** | 64 | 64 | ✅ |
+| **Facteur λL (landmark loss)** | 0.5 | 0.5 | ✅ |
+| **Résolution d'entrée** | VGA (640) | 640 | ✅ |
+| **Augmentation - Retournement vertical** | Désactivé | flipud: 0.0 | ✅ |
+| **Recadrage aléatoire** | Activé | Activé | ✅ |
+| **Mosaic** | Modifié | mosaic: 0.5 | ✅ |
+
+### Notes sur les paramètres
+
+- **Learning rate** : La décroissance cosinus (OneCycleLR) est utilisée pour progressivement réduire le taux d'apprentissage de 1E-2 à une valeur finale proche de 1E-5, conformément aux recommandations.
+- **Augmentation des données** : L'article original mentionne que certaines méthodes d'augmentation comme le retournement vertical (up-down flipping) et Mosaic (lorsque de petites images sont utilisées) peuvent dégrader les performances. Notre configuration respecte ces recommandations.
+- **Landmark loss** : Le poids de 0.5 pour la perte des points de repère (landmarks) est crucial pour obtenir une bonne précision dans la détection des points faciaux.
+
+### Modèles supportés
+
+Notre implémentation prend en charge toute la gamme de modèles YOLOv5-Face :
+
+- **YOLOv5n-0.5** : Ultra-léger, basé sur ShuffleNetV2-0.5, pour appareils très contraints
+- **YOLOv5n** : Léger, basé sur ShuffleNetV2, pour appareils mobiles
+- **YOLOv5s/m/l/x** : Gamme standard, basée sur CSPNet, avec différents multiples de profondeur (D) et largeur (W)
+- **Variantes P6** : Modèles avec couche de sortie supplémentaire (P6) pour améliorer la détection des grands visages
 
 ## Contributions et améliorations futures
 

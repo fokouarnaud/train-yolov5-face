@@ -23,7 +23,7 @@ class ModelTrainer:
             batch_size (int): Taille du batch pour l'entraînement
             epochs (int): Nombre d'epochs d'entraînement
             img_size (int): Taille d'image pour l'entraînement
-            model_size (str): Taille du modèle YOLOv5 (s, m, l, x)
+            model_size (str): Taille du modèle YOLOv5 (n-0.5, n, n6, s, m, l, x)
         """
         self.yolo_dir = yolo_dir
         self.data_dir = data_dir
@@ -48,8 +48,13 @@ class ModelTrainer:
         weights_url = f'https://github.com/ultralytics/yolov5/releases/download/v{self.yolo_version}/yolov5{self.model_size}.pt'
         
         # Télécharger les poids
-        subprocess.run(['wget', weights_url, '-O', weights_path], check=True)
-        print(f"✓ Poids téléchargés: {weights_path}")
+        try:
+            subprocess.run(['wget', weights_url, '-O', weights_path], check=True)
+            print(f"✓ Poids téléchargés: {weights_path}")
+        except subprocess.CalledProcessError:
+            print(f"✗ Erreur lors du téléchargement des poids depuis {weights_url}")
+            print("Certaines variantes peuvent ne pas être disponibles dans les versions officielles.")
+            print("L'entraînement continuera sans poids pré-entraînés ou avec des poids aléatoires.")
     
     def train(self):
         """Lance l'entraînement du modèle YOLOv5-Face
@@ -65,21 +70,31 @@ class ModelTrainer:
         # Vérifier que tous les fichiers nécessaires existent
         yaml_path = f'{self.yolo_dir}/data/widerface.yaml'
         weights_path = f'{self.yolo_dir}/weights/yolov5{self.model_size}.pt'
+        cfg_path = f'{self.yolo_dir}/models/yolov5{self.model_size}.yaml'
         
         if not os.path.exists(yaml_path):
             print(f"✗ Fichier de configuration non trouvé: {yaml_path}")
             return False
         
-        if not os.path.exists(weights_path):
-            print(f"✗ Fichier de poids non trouvé: {weights_path}")
+        if not os.path.exists(cfg_path):
+            print(f"✗ Fichier de configuration du modèle non trouvé: {cfg_path}")
+            print(f"  Assurez-vous que le fichier yolov5{self.model_size}.yaml existe dans {self.yolo_dir}/models/")
             return False
+        
+        # Pour les poids, nous pouvons continuer même s'ils ne sont pas trouvés (entraînement à partir de zéro)
+        weights_arg = ''
+        if os.path.exists(weights_path):
+            weights_arg = weights_path
+        else:
+            print(f"⚠️ Fichier de poids non trouvé: {weights_path}")
+            print("  L'entraînement commencera à partir de poids aléatoires")
         
         # Construire la commande d'entraînement
         train_cmd = [
             'python', f'{self.yolo_dir}/train.py',
             '--data', yaml_path,
-            '--cfg', f'{self.yolo_dir}/models/yolov5{self.model_size}.yaml',
-            '--weights', weights_path,
+            '--cfg', cfg_path,
+            '--weights', weights_arg,
             '--batch-size', str(self.batch_size),
             '--epochs', str(self.epochs),
             '--img', str(self.img_size),

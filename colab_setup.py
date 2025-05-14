@@ -18,7 +18,7 @@ def setup_environment(model_size='s', yolo_version='5.0'):
     Configure l'environnement Colab pour l'entraînement
     
     Args:
-        model_size (str): Taille du modèle ('s', 'm', 'l', 'x')
+        model_size (str): Taille du modèle ('n-0.5', 'n', 'n6', 's', 'm', 'l', 'x')
         yolo_version (str): Version de YOLOv5 à utiliser
     """
     # 1. Installer les dépendances compatibles
@@ -46,8 +46,13 @@ def setup_environment(model_size='s', yolo_version='5.0'):
         
         if not os.path.exists(weights_path):
             print(f"Téléchargement de yolov5{size}.pt...")
-            subprocess.run(['wget', weights_url, '-O', weights_path], check=True)
-            print(f"✓ Poids yolov5{size}.pt téléchargés")
+            try:
+                subprocess.run(['wget', weights_url, '-O', weights_path], check=True)
+                print(f"✓ Poids yolov5{size}.pt téléchargés")
+            except subprocess.CalledProcessError:
+                print(f"✗ Erreur lors du téléchargement des poids yolov5{size}.pt")
+                print(f"  Le modèle {size} sera initialisé avec des poids aléatoires")
+                # Certaines variantes comme n-0.5 et n6 peuvent ne pas être disponibles en téléchargement
         else:
             print(f"✓ Poids yolov5{size}.pt déjà présents")
     
@@ -78,8 +83,8 @@ def setup_environment(model_size='s', yolo_version='5.0'):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Configuration de l'environnement Colab pour YOLOv5-Face")
-    parser.add_argument('--model-size', type=str, default='s', choices=['s', 'm', 'l', 'x', 'all'],
-                        help='Taille du modèle à télécharger (s, m, l, x, all)')
+    parser.add_argument('--model-size', type=str, default='s', choices=['n-0.5', 'n', 'n6', 's', 'm', 'l', 'x', 'all'],
+                        help='Taille du modèle à télécharger (n-0.5, n, n6, s, m, l, x, all)')
     parser.add_argument('--yolo-version', type=str, default='5.0',
                         help='Version de YOLOv5 à utiliser (par exemple 5.0)')
     

@@ -31,8 +31,8 @@ def parse_args():
                         help='Nombre d\'epochs d\'entraînement')
     parser.add_argument('--img-size', type=int, default=640, 
                         help='Taille d\'image pour l\'entraînement')
-    parser.add_argument('--model-size', type=str, default='s', choices=['s', 'm', 'l', 'x'],
-                        help='Taille du modèle YOLOv5 (s, m, l, x)')
+    parser.add_argument('--model-size', type=str, default='s', choices=['n-0.5', 'n', 'n6', 's', 'm', 'l', 'x'],
+                        help='Taille du modèle YOLOv5 (n-0.5, n, n6, s, m, l, x)')
     parser.add_argument('--yolo-version', type=str, default='5.0',
                         help='Version de YOLOv5 (par exemple 5.0)')
     parser.add_argument('--skip-train', action='store_true',

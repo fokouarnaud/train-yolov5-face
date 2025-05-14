@@ -30,8 +30,8 @@ DEFAULT_PATHS = {
 
 # Configuration de l'entraînement par défaut
 DEFAULT_TRAINING = {
-    "batch_size": 32,
-    "epochs": 300,
+    "batch_size": 64,
+    "epochs": 250,
     "img_size": 640,
     "model_size": "s",
     "yolo_version": "5.0",
