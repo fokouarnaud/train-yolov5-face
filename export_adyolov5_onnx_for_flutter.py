@@ -95,6 +95,9 @@ def main():
         input_names = ['input']
         output_names = ['output']
         
+        # Activer le mode export pour la Detect tête
+        model.model[-1].export = True  # Nécessaire pour inclure la tête P2/4
+        
         dynamic_axes = None
         if args.dynamic_batch:
             dynamic_axes = {

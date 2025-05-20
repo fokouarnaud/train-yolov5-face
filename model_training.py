@@ -170,6 +170,15 @@ class ModelTrainer:
             '--rect'
         ]
         
+        # Utiliser le fichier d'hyperparamètres spécial pour ADYOLOv5-Face
+        if self.model_size == 'ad':
+            hyp_adyolo = f'{self.yolo_dir}/data/hyp.adyolo.yaml'
+            if os.path.exists(hyp_adyolo):
+                train_cmd.extend(['--hyp', hyp_adyolo])
+                print(f"  - Utilisation des hyperparamètres optimisés pour petits visages: {hyp_adyolo}")
+            else:
+                print(f"  - Fichier d'hyperparamètres {hyp_adyolo} non trouvé, utilisation des valeurs par défaut")
+        
         # Lancer l'entraînement
         print("Commande d'entraînement:")
         print(' '.join(train_cmd))
