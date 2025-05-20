@@ -37,6 +37,55 @@ DEFAULT_TRAINING = {
     "yolo_version": "5.0",
 }
 
+# Configuration des modèles disponibles
+MODEL_CONFIGS = {
+    "n-0.5": {
+        "yaml": "yolov5n-0.5.yaml",
+        "weights": "yolov5n-0.5.pt",
+        "img_size": 640,
+    },
+    "n": {
+        "yaml": "yolov5n.yaml",
+        "weights": "yolov5n.pt",
+        "img_size": 640,
+    },
+    "s": {
+        "yaml": "yolov5s.yaml",
+        "weights": "yolov5s.pt",
+        "img_size": 640,
+    },
+    "s6": {
+        "yaml": "yolov5s6.yaml",
+        "weights": "yolov5s6.pt",
+        "img_size": 640,
+    },
+    "m": {
+        "yaml": "yolov5m.yaml",
+        "weights": "yolov5m.pt",
+        "img_size": 640,
+    },
+    "m6": {
+        "yaml": "yolov5m6.yaml",
+        "weights": "yolov5m6.pt",
+        "img_size": 640,
+    },
+    "l": {
+        "yaml": "yolov5l.yaml",
+        "weights": "yolov5l.pt",
+        "img_size": 640,
+    },
+    "l6": {
+        "yaml": "yolov5l6.yaml",
+        "weights": "yolov5l6.pt",
+        "img_size": 640,
+    },
+    "ad": {  # ADYOLOv5-Face
+        "yaml": "adyolov5s.yaml",
+        "weights": "yolov5s.pt",  # Utilise les poids de base de YOLOv5s
+        "img_size": 640,
+    },
+}
+
 # Messages d'information
 INFO_MESSAGES = {
     "pytorch_fix": "✓ Le dépôt forké inclut déjà les corrections nécessaires pour PyTorch 2.6+",

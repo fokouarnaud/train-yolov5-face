@@ -9,7 +9,7 @@ import subprocess
 import yaml
 
 # Importer la configuration centralisée
-from config import DEFAULT_TRAINING, DEFAULT_PATHS
+from config import DEFAULT_TRAINING, DEFAULT_PATHS, MODEL_CONFIGS
 
 class ModelTrainer:
     """Classe pour gérer l'entraînement du modèle YOLOv5-Face"""
@@ -43,23 +43,37 @@ class ModelTrainer:
             - Les modèles ultra-légers n-0.5 et n sont spécifiques à YOLOv5-Face et utilisent ShuffleNetV2
             - Les modèles standards (s, m, l, x) utilisent CSPNet comme backbone
             - Les variantes avec suffixe '6' incluent un bloc de sortie P6 pour les grands visages
+            - Le modèle 'ad' est ADYOLOv5-Face, une version améliorée de YOLOv5s-Face pour les petits visages
         """
         print("\n=== Téléchargement des poids pré-entraînés ===")
         
+        # Utiliser la configuration du modèle appropriée
+        config = MODEL_CONFIGS.get(self.model_size, {})
+        base_weights = config.get('weights', f'yolov5{self.model_size}.pt')
+        
         # Chemin du répertoire des poids
         weights_dir = os.path.join(self.yolo_dir, 'weights')
-        weights_path = os.path.join(weights_dir, f'yolov5{self.model_size}.pt')
+        weights_path = os.path.join(weights_dir, base_weights)
         
         # Créer le répertoire des poids s'il n'existe pas
         os.makedirs(weights_dir, exist_ok=True)
         
+        # Pour ADYOLOv5-Face, nous utilisons les poids de YOLOv5s comme base
+        download_weights = base_weights
+        
         # Téléchargement direct des poids
-        weights_url = f'https://github.com/ultralytics/yolov5/releases/download/v{self.yolo_version}/yolov5{self.model_size}.pt'
+        weights_url = f'https://github.com/ultralytics/yolov5/releases/download/v{self.yolo_version}/{download_weights}'
         
         # Télécharger les poids
         try:
             subprocess.run(['wget', weights_url, '-O', weights_path], check=True)
             print(f"✓ Poids téléchargés: {weights_path}")
+            
+            # Message spécifique pour ADYOLOv5-Face
+            if self.model_size == 'ad':
+                print(f"  Note: Pour ADYOLOv5-Face, nous utilisons les poids de YOLOv5s comme base")
+                print(f"  Ces poids seront adaptés à la nouvelle architecture pendant l'entraînement")
+                
         except subprocess.CalledProcessError:
             print(f"✗ Erreur lors du téléchargement des poids depuis {weights_url}")
             if self.model_size in ['n-0.5', 'n']:
@@ -69,6 +83,9 @@ class ModelTrainer:
                 print(f"Le modèle YOLOv5{self.model_size} inclut un bloc de sortie P6 pour améliorer la détection des grands visages.")
                 if self.model_size == 'n6':
                     print(f"ATTENTION: Le modèle YOLOv5n6 n'est pas officiellement supporté. Utilisez YOLOv5s6 à la place.")
+            elif self.model_size == 'ad':
+                print(f"ADYOLOv5-Face est une version améliorée de YOLOv5s-Face avec un mécanisme GD et une tête supplémentaire pour les petits visages.")
+                print(f"Nous utilisons les poids de YOLOv5s comme base pour l'entraînement.")
             else:
                 print("Certaines variantes peuvent ne pas être disponibles dans les versions officielles.")
             print("L'entraînement continuera sans poids pré-entraînés ou avec des poids aléatoires.")
@@ -91,10 +108,28 @@ class ModelTrainer:
         
         print("\n=== Démarrage de l'entraînement ===")
         
+        # Utiliser la configuration du modèle appropriée
+        config = MODEL_CONFIGS.get(self.model_size, {})
+        model_yaml = config.get('yaml', f'yolov5{self.model_size}.yaml')
+        base_weights = config.get('weights', f'yolov5{self.model_size}.pt')
+        
         # Vérifier que tous les fichiers nécessaires existent
         yaml_path = f'{self.yolo_dir}/data/widerface.yaml'
-        weights_path = f'{self.yolo_dir}/weights/yolov5{self.model_size}.pt'
-        cfg_path = f'{self.yolo_dir}/models/yolov5{self.model_size}.yaml'
+        weights_path = f'{self.yolo_dir}/weights/{base_weights}'
+        cfg_path = f'{self.yolo_dir}/models/{model_yaml}'
+        
+        # Afficher les informations sur le modèle sélectionné
+        print(f"Modèle sélectionné: {self.model_size}")
+        print(f"  - Configuration YAML: {model_yaml}")
+        print(f"  - Poids de base: {base_weights}")
+        
+        # Message spécial pour ADYOLOv5-Face
+        if self.model_size == 'ad':
+            print("\nℹ️ INFORMATIONS SUR ADYOLOV5-FACE")
+            print("  - Architecture améliorée basée sur YOLOv5s-Face")
+            print("  - Mécanisme Gather-and-Distribute (GD) dans le neck")
+            print("  - Tête de détection supplémentaire pour les petits visages")
+            print("  - Performances améliorées sur les visages de petite taille")
         
         if not os.path.exists(yaml_path):
             print(f"✗ Fichier de configuration non trouvé: {yaml_path}")
@@ -102,7 +137,7 @@ class ModelTrainer:
         
         if not os.path.exists(cfg_path):
             print(f"✗ Fichier de configuration du modèle non trouvé: {cfg_path}")
-            print(f"  Assurez-vous que le fichier yolov5{self.model_size}.yaml existe dans {self.yolo_dir}/models/")
+            print(f"  Assurez-vous que le fichier {model_yaml} existe dans {self.yolo_dir}/models/")
             return False
         
         # Pour les poids, nous pouvons continuer même s'ils ne sont pas trouvés (entraînement à partir de zéro)

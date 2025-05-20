@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 # Importer la configuration centralisée
-from config import REPO_URL, DEPENDENCIES, DEFAULT_PATHS, INFO_MESSAGES, DEFAULT_TRAINING
+from config import REPO_URL, DEPENDENCIES, DEFAULT_PATHS, INFO_MESSAGES, DEFAULT_TRAINING, MODEL_CONFIGS
 
 # Import des modules personnalisés
 from data_preparation import DataPreparation
@@ -31,8 +31,8 @@ def parse_args():
                         help='Nombre d\'epochs d\'entraînement')
     parser.add_argument('--img-size', type=int, default=DEFAULT_TRAINING["img_size"], 
                         help='Taille d\'image pour l\'entraînement')
-    parser.add_argument('--model-size', type=str, default=DEFAULT_TRAINING["model_size"], choices=['n-0.5', 'n', 's', 's6', 'm', 'm6', 'l', 'l6', 'x', 'x6'],
-                        help='Taille du modèle YOLOv5 (n-0.5, n, s, s6, m, m6, l, l6, x, x6)')
+    parser.add_argument('--model-size', type=str, default=DEFAULT_TRAINING["model_size"], choices=list(MODEL_CONFIGS.keys()),
+                        help='Taille du modèle YOLOv5 (n-0.5, n, s, s6, m, m6, l, l6, x, x6, ad) - "ad" pour ADYOLOv5-Face')
     parser.add_argument('--yolo-version', type=str, default=DEFAULT_TRAINING["yolo_version"],
                         help='Version de YOLOv5 (par exemple 5.0)')
     parser.add_argument('--skip-train', action='store_true',
