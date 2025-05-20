@@ -59,6 +59,8 @@ def parse_args():
                         help='Nombre d\'epochs d\'entraînement')
     parser.add_argument('--img-size', type=int, default=640, 
                         help='Taille d\'image pour l\'entraînement')
+    parser.add_argument('--model-type', type=str, choices=['standard', 'simple'], default='simple',
+                        help='Type de modèle (standard: avec GatherLayer/DistributeLayer, simple: implémentation alternative avec Concat)')
     parser.add_argument('--skip-train', action='store_true',
                         help='Ignorer l\'étape d\'entraînement')
     parser.add_argument('--skip-evaluation', action='store_true',
@@ -70,9 +72,19 @@ def parse_args():
 args = parse_args()
 
 # Configuration de l'environnement
-print("\n=== Configuration de l'environnement ===")
+print("\n=== Configuration de l'environnement ===\n")
+print(f"Utilisation du modèle ADYOLOv5-Face {'SIMPLE (avec Concat)' if args.model_type == 'simple' else 'STANDARD (avec GatherLayer/DistributeLayer)'}")
+
 os.chdir("/content")
-subprocess.run(["python", "colab_setup.py", "--model-size", "ad"], check=True)
+
+# Copier le fichier YAML spécifique selon le modèle choisi
+model_yaml = "adyolov5s_simple.yaml" if args.model_type == "simple" else "adyolov5s.yaml"
+
+# Modifier la configuration pour utiliser le bon fichier YAML
+subprocess.run(
+    ["python", "colab_setup.py", "--model-size", "ad", "--model-yaml", model_yaml], 
+    check=True
+)
 
 # Lancer l'entraînement avec ADYOLOv5-Face
 print("\n=== Lancement de l'entraînement ADYOLOv5-Face ===")
@@ -81,7 +93,8 @@ command = [
     "--model-size", "ad",
     "--batch-size", str(args.batch_size),
     "--epochs", str(args.epochs),
-    "--img-size", str(args.img_size)
+    "--img-size", str(args.img_size),
+    "--model-type", args.model_type
 ]
 
 if args.skip_train:

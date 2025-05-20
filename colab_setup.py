@@ -13,7 +13,7 @@ import argparse
 # Importer la configuration centralisée
 from config import REPO_URL, DEPENDENCIES, DEFAULT_PATHS, INFO_MESSAGES
 
-def setup_environment(model_size='s', yolo_version='5.0'):
+def setup_environment(model_size='s', yolo_version='5.0', model_yaml=None):
     """
     Configure l'environnement Colab pour l'entraînement
     
@@ -22,7 +22,9 @@ def setup_environment(model_size='s', yolo_version='5.0'):
                           - n-0.5, n : modèles ultra-légers (ShuffleNetV2) pour appareils mobiles
                           - s, m, l, x : modèles standards (CSPNet)
                           - s6, m6, l6, x6 : versions avec bloc P6 pour grands visages
+                          - ad : ADYOLOv5-Face pour améliorer la détection des petits visages
         yolo_version (str): Version de YOLOv5 à utiliser
+        model_yaml (str): Fichier YAML spécifique à utiliser (remplace celui défini par model_size)
     """
     # Bloquer complètement l'utilisation de n6 qui n'est pas officiellement supporté
     if model_size == 'n6':
@@ -87,7 +89,22 @@ def setup_environment(model_size='s', yolo_version='5.0'):
         sys.path.insert(0, '/content')
         print("✓ Répertoire /content ajouté au PYTHONPATH")
     
-    # 7. Vérifier la présence des scripts Python
+    # 7. Si un fichier YAML spécifique est fourni et qu'il s'agit d'ADYOLOv5, le copier
+    if model_size == 'ad' and model_yaml:
+        print(f"=== Configuration d'ADYOLOv5-Face ===\n")
+        print(f"Utilisation du fichier YAML: {model_yaml}")
+        
+        # Vérifier si c'est la version standard ou simple
+        is_simple = 'simple' in model_yaml
+        print(f"Version: {'SIMPLE (avec Concat)' if is_simple else 'STANDARD (avec GatherLayer/DistributeLayer)'}")
+        
+        # Modifier la configuration pour pointer vers le bon fichier YAML
+        from config import MODEL_CONFIGS
+        MODEL_CONFIGS['ad']['yaml'] = model_yaml
+        
+        print(f"Configuration mise à jour pour utiliser: {MODEL_CONFIGS['ad']['yaml']}\n")
+    
+    # 8. Vérifier la présence des scripts Python
     scripts = ['main.py', 'data_preparation.py', 'model_training.py', 'model_evaluation.py', 'utils.py']
     missing_scripts = [script for script in scripts if not os.path.exists(f'/content/{script}')]
     
@@ -103,10 +120,12 @@ def setup_environment(model_size='s', yolo_version='5.0'):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Configuration de l'environnement Colab pour YOLOv5-Face")
-    parser.add_argument('--model-size', type=str, default='s', choices=['n-0.5', 'n', 's', 's6', 'm', 'm6', 'l', 'l6', 'x', 'x6', 'all'],
-                        help='Taille du modèle à télécharger (n-0.5, n, s, s6, m, m6, l, l6, x, x6, all)')
+    parser.add_argument('--model-size', type=str, default='s', choices=['n-0.5', 'n', 's', 's6', 'm', 'm6', 'l', 'l6', 'x', 'x6', 'ad', 'all'],
+                        help='Taille du modèle à télécharger (n-0.5, n, s, s6, m, m6, l, l6, x, x6, ad, all)')
     parser.add_argument('--yolo-version', type=str, default='5.0',
                         help='Version de YOLOv5 à utiliser (par exemple 5.0)')
+    parser.add_argument('--model-yaml', type=str, default=None,
+                        help='Fichier YAML spécifique à utiliser (pour ADYOLOv5-Face: adyolov5s.yaml ou adyolov5s_simple.yaml)')
     
     args = parser.parse_args()
-    setup_environment(args.model_size, args.yolo_version)
+    setup_environment(args.model_size, args.yolo_version, args.model_yaml)

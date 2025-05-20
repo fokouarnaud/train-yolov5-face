@@ -82,7 +82,7 @@ def main():
         img = img.half()
     
     # Préparer le nom de fichier de sortie
-    output_name = f"adyolov5_face_{args.img_size}{'_half' if args.half else ''}"
+    output_name = f"adyolov5_face_{args.img_size}{'_simple' if 'simple' in weights_path.as_posix() else ''}{'_half' if args.half else ''}"
     if args.include_nms:
         output_name += "_with_nms"
     output_path = export_dir / f"{output_name}.onnx"
@@ -153,10 +153,18 @@ def main():
                 flutter_models_dir = Path(args.flutter_path) / "assets" / "models"
                 os.makedirs(flutter_models_dir, exist_ok=True)
                 
+                # Déterminer si c'est la version simple ou standard
+                is_simple = "simple" in output_name
+                version_str = "simple" if is_simple else "standard"
+                
                 flutter_model_path = flutter_models_dir / f"{output_name}_quantized.onnx"
                 import shutil
                 shutil.copy(quant_model_path, flutter_model_path)
                 print(f"Model copied to Flutter app: {flutter_model_path}")
+                
+                # Mettre à jour les constantes dans l'application Flutter
+                print("\nN'oubliez pas de mettre à jour la constante correspondante dans model_file.dart:")
+                print(f'  static const String adYoloV5Face{args.img_size}x{args.img_size}DynamicBatchonnx =\n      \'assets/models/{output_name}_quantized.onnx\';')
             
         except Exception as e:
             print(f"Erreur lors de la quantification du modèle ONNX: {e}")
@@ -176,13 +184,13 @@ def main():
             print("\nActions requises pour intégrer le modèle dans l'application Flutter:")
             print("1. Assurez-vous que le fichier pubspec.yaml inclut le chemin vers le modèle dans les assets:")
             print("""
-  flutter:
-    assets:
-      - assets/models/adyolov5_face_{}_quantized.onnx
-            """.format(args.img_size))
-            print("2. Utilisez la classe ADYoloOnnxFaceDetection pour la détection.")
-            print("3. Dans adyolo_configs.dart, assurez-vous que le chemin du modèle est correct:")
-            print(f"   modelPath: 'assets/models/{output_name}_quantized.onnx'")
+            flutter:
+            assets:
+            - assets/models/{}_quantized.onnx
+            """.format(output_name))
+            print(f"2. Utilisez YoloOnnxFaceDetection.adyolo() pour l'implémentation ADYOLOv5-Face.")
+            print(f"3. Dans model_file.dart, ajoutez la constante correspondante:")
+            print(f"   static const String adYoloV5Face{args.img_size}x{args.img_size}DynamicBatchonnx = 'assets/models/{output_name}_quantized.onnx';")
         
     except Exception as e:
         print(f"Erreur lors de l'exportation ONNX: {e}")

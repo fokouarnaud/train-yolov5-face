@@ -35,6 +35,8 @@ def parse_args():
                         help='Taille du modèle YOLOv5 (n-0.5, n, s, s6, m, m6, l, l6, x, x6, ad) - "ad" pour ADYOLOv5-Face')
     parser.add_argument('--yolo-version', type=str, default=DEFAULT_TRAINING["yolo_version"],
                         help='Version de YOLOv5 (par exemple 5.0)')
+    parser.add_argument('--model-type', type=str, choices=['standard', 'simple'], default='simple',
+                        help='Type de modèle (standard: avec GatherLayer/DistributeLayer, simple: implémentation alternative avec Concat)')
     parser.add_argument('--skip-train', action='store_true',
                         help='Ignorer l\'étape d\'entraînement')
     parser.add_argument('--skip-evaluation', action='store_true',
@@ -78,6 +80,15 @@ def main():
     # Le patch PyTorch 2.6+ est déjà intégré dans le dépôt forké
     print("\n=== Vérification de la compatibilité PyTorch ===")
     print(INFO_MESSAGES["pytorch_fix"])
+    
+    # Pour ADYOLOv5-Face avec option model-type
+    if args.model_size == 'ad':
+        model_yaml = "adyolov5s_simple.yaml" if args.model_type == "simple" else "adyolov5s.yaml"
+        print(f"\n=== Configuration ADYOLOv5-Face ===")
+        print(f"Version: {args.model_type.upper()} - Fichier: {model_yaml}")
+        
+        # Modifier dynamiquement la configuration
+        MODEL_CONFIGS['ad']['yaml'] = model_yaml
     
     # Étape 4: Entraînement du modèle
     if not args.skip_train:
