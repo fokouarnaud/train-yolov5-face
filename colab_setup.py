@@ -13,7 +13,37 @@ import argparse
 # Importer la configuration centralisée
 from config import REPO_URL, DEPENDENCIES, DEFAULT_PATHS, INFO_MESSAGES
 
-def setup_environment(model_size='s', yolo_version='5.0', model_yaml=None):
+def fix_common_py(yolo_dir):
+    """Corrige l'import manquant dans common.py"""
+    common_py_path = os.path.join(yolo_dir, 'models', 'common.py')
+    
+    if os.path.exists(common_py_path):
+        with open(common_py_path, 'r') as f:
+            content = f.read()
+        
+        # Vérifier si l'import est déjà présent au début du fichier
+        if not content.startswith('import torch\nimport torch.nn as nn'):
+            # Vérifier s'il y a une classe au début du fichier sans imports
+            if content.startswith('class '):
+                # Ajouter l'import au début du fichier
+                new_content = 'import torch\nimport torch.nn as nn\n\n' + content
+                
+                # Écrire le contenu modifié
+                with open(common_py_path, 'w') as f:
+                    f.write(new_content)
+                
+                print(f"✓ Import manquant ajouté dans {common_py_path}")
+                return True
+        else:
+            print(f"✓ Import déjà présent dans {common_py_path}")
+            return True
+    else:
+        print(f"✗ Fichier {common_py_path} introuvable")
+        return False
+    
+    return False
+
+def setup_environment(model_size='s', yolo_version='5.0'):
     """
     Configure l'environnement Colab pour l'entraînement
     
@@ -24,7 +54,6 @@ def setup_environment(model_size='s', yolo_version='5.0', model_yaml=None):
                           - s6, m6, l6, x6 : versions avec bloc P6 pour grands visages
                           - ad : ADYOLOv5 avec mécanisme Gather-and-Distribute pour petits visages
         yolo_version (str): Version de YOLOv5 à utiliser
-        model_yaml (str): Fichier YAML spécifique à utiliser (remplace celui défini par model_size)
     """
     # Bloquer complètement l'utilisation de n6 qui n'est pas officiellement supporté
     if model_size == 'n6':
@@ -44,11 +73,15 @@ def setup_environment(model_size='s', yolo_version='5.0', model_yaml=None):
         # Utiliser le dépôt forké avec les corrections déjà appliquées
         subprocess.run(['git', 'clone', REPO_URL, yolo_dir], check=True)
     
-    # 3. Créer le répertoire des poids
+    # 3. Vérifier et corriger les imports manquants dans common.py
+    print("=== Vérification des imports manquants ===")
+    fix_common_py(yolo_dir)
+    
+    # 4. Créer le répertoire des poids
     weights_dir = os.path.join(yolo_dir, 'weights')
     os.makedirs(weights_dir, exist_ok=True)
     
-    # 4. Télécharger les poids pré-entraînés
+    # 5. Télécharger les poids pré-entraînés
     print(f"=== Téléchargement des poids YOLOv5 v{yolo_version} ===")
     # Si c'est ADYOLOv5, nous utiliserons les poids YOLOv5s comme base
     base_model_size = 's' if model_size == 'ad' else model_size
@@ -80,7 +113,7 @@ def setup_environment(model_size='s', yolo_version='5.0', model_yaml=None):
         else:
             print(f"✓ Poids yolov5{size}.pt déjà présents")
     
-    # 5. Si c'est ADYOLOv5, préparer les fichiers nécessaires
+    # 6. Si c'est ADYOLOv5, préparer les fichiers nécessaires
     if model_size == 'ad':
         print("=== Configuration d'ADYOLOv5-Face ===")
         
@@ -369,18 +402,18 @@ copy_paste: 0.0  # probabilité de l'augmentation de copier-coller de l'image
         else:
             print(f"✗ Fichier {yolo_py_path} introuvable")
     
-    # 6. Vérification de la compatibilité PyTorch 2.6+
+    # 7. Vérification de la compatibilité PyTorch 2.6+
     print("=== Vérification de la compatibilité PyTorch 2.6+ ===")
     print(INFO_MESSAGES["pytorch_fix"])
     print("✓ Aucune modification du code n'est nécessaire")
     
-    # 7. Ajouter le répertoire courant au PYTHONPATH
+    # 8. Ajouter le répertoire courant au PYTHONPATH
     if '/content' not in sys.path:
         print("=== Configuration du PYTHONPATH ===")
         sys.path.insert(0, '/content')
         print("✓ Répertoire /content ajouté au PYTHONPATH")
     
-    # 8. Vérifier la présence des scripts Python
+    # 9. Vérifier la présence des scripts Python
     scripts = ['main.py', 'data_preparation.py', 'model_training.py', 'model_evaluation.py', 'utils.py']
     missing_scripts = [script for script in scripts if not os.path.exists(f'/content/{script}')]
     
@@ -403,8 +436,6 @@ if __name__ == "__main__":
                         help='Taille du modèle à télécharger (n-0.5, n, s, s6, m, m6, l, l6, x, x6, all, ad)')
     parser.add_argument('--yolo-version', type=str, default='5.0',
                         help='Version de YOLOv5 à utiliser (par exemple 5.0)')
-    parser.add_argument('--model-yaml', type=str, default=None,
-                        help='Fichier YAML spécifique à utiliser (pour ADYOLOv5-Face: adyolov5s.yaml ou adyolov5s_simple.yaml)')
     
     args = parser.parse_args()
-    setup_environment(args.model_size, args.yolo_version, args.model_yaml)
+    setup_environment(args.model_size, args.yolo_version)
