@@ -80,7 +80,7 @@ MODEL_CONFIGS = {
         "img_size": 640,
     },
     "ad": {  # ADYOLOv5-Face
-        "yaml": "adyolov5s_simple.yaml",
+        "yaml": "adyolov5s.yaml",
         "weights": "yolov5s.pt",  # Utilise les poids de base de YOLOv5s
         "img_size": 640,
     },
