@@ -41,6 +41,7 @@ DEFAULT_TRAINING = {
 INFO_MESSAGES = {
     "pytorch_fix": "✓ Le dépôt forké inclut déjà les corrections nécessaires pour PyTorch 2.6+",
     "numpy_fix": "✓ Correction des problèmes liés à np.int dans NumPy 1.26+",
+    "adyolo_info": "ADYOLOv5-Face est une version améliorée avec un mécanisme Gather-and-Distribute pour la détection des petits visages",
 }
 
 # Configuration des scripts à copier
@@ -53,3 +54,35 @@ REQUIRED_SCRIPTS = [
     "colab_setup.py",
     "config.py",  # Inclure la config elle-même
 ]
+
+# Modèles disponibles
+AVAILABLE_MODELS = {
+    "n-0.5": {
+        "description": "Version ultra-légère avec ShuffleNetV2 (spécifique à YOLOv5-Face)",
+        "use_case": "Appareils mobiles avec ressources limitées",
+    },
+    "n": {
+        "description": "Version légère avec ShuffleNetV2 (spécifique à YOLOv5-Face)",
+        "use_case": "Appareils mobiles et embarqués",
+    },
+    "s": {
+        "description": "Version petite avec CSPNet",
+        "use_case": "Équilibre entre vitesse et précision",
+    },
+    "m": {
+        "description": "Version moyenne avec CSPNet",
+        "use_case": "Précision accrue avec vitesse acceptable",
+    },
+    "l": {
+        "description": "Version large avec CSPNet",
+        "use_case": "Haute précision pour les cas d'utilisation exigeants",
+    },
+    "x": {
+        "description": "Version extra-large avec CSPNet",
+        "use_case": "Précision maximale, vitesse réduite",
+    },
+    "ad": {
+        "description": "ADYOLOv5-Face avec mécanisme Gather-and-Distribute",
+        "use_case": "Détection optimisée des petits visages",
+    },
+}
