@@ -151,13 +151,26 @@ def setup_environment(model_size='s', yolo_version='5.0'):
     
     # 9. Vérifier la présence des scripts Python
     scripts = ['main.py', 'data_preparation.py', 'model_training.py', 'model_evaluation.py', 'utils.py']
+    
+    # Scripts spécifiques pour l'optimisation mémoire
+    memory_scripts = ['train_adyolo_optimized.py', 'test_gd_quick.py']
+    
     missing_scripts = [script for script in scripts if not os.path.exists(f'/content/{script}')]
+    missing_memory_scripts = [script for script in memory_scripts if not os.path.exists(f'/content/{script}')]
     
     if missing_scripts:
         print(f"⚠️ Attention: Les scripts suivants sont manquants: {', '.join(missing_scripts)}")
         print("Assurez-vous de les copier depuis Google Drive ou de les télécharger.")
     else:
         print("✓ Tous les scripts Python nécessaires sont présents")
+    
+    # Vérifier les scripts d'optimisation mémoire (important pour ADYOLOv5)
+    if model_size == 'ad':
+        if missing_memory_scripts:
+            print(f"⚠️ Scripts d'optimisation mémoire manquants: {', '.join(missing_memory_scripts)}")
+            print("Ces scripts sont recommandés pour éviter les erreurs CUDA Out of Memory")
+        else:
+            print("✓ Scripts d'optimisation mémoire présents (train_adyolo_optimized.py, test_gd_quick.py)")
     
     print("\n=== Configuration terminée ===")
     if model_size == 'ad':
@@ -184,11 +197,26 @@ def setup_environment(model_size='s', yolo_version='5.0'):
     print("\n🎉 Configuration terminée avec succès !")
     print("Vous pouvez maintenant exécuter le script principal avec la commande:")
     if model_size == 'ad':
-        print("!python main.py --model-size ad")
-        print("\n📊 ADYOLOv5-Face configuré avec:")
+        print("\n🚀 Options d'entraînement ADYOLOv5-Face:")
+        print("")
+        print("🧪 Mode optimisé mémoire (RECOMMANDÉ pour éviter CUDA Out of Memory):")
+        print("!python main.py --model-size ad --memory-optimized")
+        print("ou")
+        print("!python train_adyolo_optimized.py")
+        print("")
+        print("📦 Test rapide avant entraînement:")
+        print("!python test_gd_quick.py")
+        print("")
+        print("📊 ADYOLOv5-Face configuré avec:")
         print("   ✓ 4 têtes de détection (P2/P3/P4/P5)")
-        print("   ✓ Mécanisme Gather-and-Distribute")
-        print("   ✓ Correction YAML appliquée")
+        print("   ✓ Mécanisme Gather-and-Distribute optimisé mémoire")
+        print("   ✓ AttentionFusion et TransformerFusion efficient")
+        print("   ✓ Batch size adaptatif selon GPU disponible")
+        print("")
+        print("⚠️ Si erreur mémoire persiste:")
+        print("   1. Réduire batch-size: --batch-size 4")
+        print("   2. Réduire résolution: --img-size 416")
+        print("   3. Utiliser CPU: CUDA_VISIBLE_DEVICES='' python ...")
     else:
         print(f"!python main.py --model-size {model_size}")
 

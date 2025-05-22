@@ -41,6 +41,8 @@ def parse_args():
                         help='Ignorer l\'étape d\'évaluation')
     parser.add_argument('--skip-export', action='store_true',
                         help='Ignorer l\'étape d\'exportation')
+    parser.add_argument('--memory-optimized', action='store_true',
+                        help='Utiliser l\'entraînement optimisé pour la mémoire (batch size réduit, résolution adaptative)')
     
     return parser.parse_args()
 
@@ -92,16 +94,28 @@ def main():
     
     # Étape 4: Entraînement du modèle
     if not args.skip_train:
-        trainer = ModelTrainer(
-            yolo_dir=yolo_dir,
-            data_dir=data_dir,
-            batch_size=args.batch_size,
-            epochs=args.epochs,
-            img_size=args.img_size,
-            model_size=args.model_size,
-            yolo_version=args.yolo_version
-        )
-        train_success = trainer.train()
+        if args.memory_optimized and args.model_size == 'ad':
+            # Utiliser l'entraînement optimisé pour ADYOLOv5-Face
+            print("\n=== Mode entraînement optimisé mémoire ===\n")
+            from train_adyolo_optimized import train_adyolov5_optimized
+            try:
+                train_adyolov5_optimized()
+                train_success = True
+            except Exception as e:
+                print(f"❌ Erreur entraînement optimisé: {e}")
+                train_success = False
+        else:
+            # Entraînement standard
+            trainer = ModelTrainer(
+                yolo_dir=yolo_dir,
+                data_dir=data_dir,
+                batch_size=args.batch_size,
+                epochs=args.epochs,
+                img_size=args.img_size,
+                model_size=args.model_size,
+                yolo_version=args.yolo_version
+            )
+            train_success = trainer.train()
     else:
         train_success = True
         print("\n=== Étape d'entraînement ignorée ===")
