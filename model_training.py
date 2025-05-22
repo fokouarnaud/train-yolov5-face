@@ -122,7 +122,7 @@ class ModelTrainer:
         
         # Déterminer le fichier de configuration et les hyperparamètres à utiliser
         if self.model_size == 'ad':
-            cfg_path = f'{self.yolo_dir}/models/adyolov5s_simple.yaml'
+            cfg_path = f'{self.yolo_dir}/models/adyolov5s.yaml'
             hyp_path = f'{self.yolo_dir}/data/hyp.adyolo.yaml'
             weights_path = f'{self.yolo_dir}/weights/yolov5s.pt'  # Utiliser YOLOv5s comme base
         else:

@@ -7,6 +7,7 @@ Ce script sera utilisé par colab_setup.py pour vérifier que tout fonctionne co
 import torch
 import sys
 import os
+import yaml
 from pathlib import Path
 
 def test_adyolo_colab():
@@ -42,7 +43,7 @@ def test_adyolo_colab():
     print("\n3. Critical Files Check...")
     critical_files = [
         '/content/yolov5-face/models/gd.py',
-        '/content/yolov5-face/models/adyolov5s_simple.yaml',  
+        '/content/yolov5-face/models/adyolov5s.yaml',  
         '/content/yolov5-face/data/hyp.adyolo.yaml'
     ]
     
@@ -104,20 +105,34 @@ def test_adyolo_colab():
     # Test 6: Model creation
     print("\n6. ADYOLOv5-Face Model Test...")
     try:
-        config_path = '/content/yolov5-face/models/adyolov5s_simple.yaml'
+        config_path = '/content/yolov5-face/models/adyolov5s.yaml'
+        
+        # Test YAML syntax first
+        print("   Testing YAML syntax...")
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+        print(f"   ✅ YAML syntax valid - {config['nc']} classes, {len(config['anchors'])} anchor levels")
         
         # Créer le modèle
         model = Model(config_path, ch=3, nc=1)
         model.eval()
         
         print(f"   ✅ Model created")
-        print(f"   Detection heads: {len(model.detect_layers)}")
+        print(f"   Model layers: {len(model.model)}")
         
         # Vérifier que c'est bien ADYOLOv5 (4 têtes de détection)
-        if len(model.detect_layers) == 4:
-            print("   ✅ ADYOLOv5-Face confirmed (4 detection heads)")
+        detect_layer = model.model[-1]  # La dernière couche est Detect
+        if hasattr(detect_layer, 'nl'):
+            print(f"   Detection levels: {detect_layer.nl}")
+            
+            if detect_layer.nl == 4:
+                print("   ✅ ADYOLOv5-Face confirmed (4 detection heads: P2/P3/P4/P5)")
+                print(f"   Strides: {detect_layer.stride.tolist()}")
+                print(f"   Anchor sets: {len(detect_layer.anchors)}")
+            else:
+                print(f"   ⚠ Expected 4 heads, got {detect_layer.nl}")
         else:
-            print(f"   ⚠ Expected 4 heads, got {len(model.detect_layers)}")
+            print("   ⚠ Could not verify detection heads structure")
         
         # Test forward pass
         device = 'cuda' if torch.cuda.is_available() else 'cpu'

@@ -117,10 +117,10 @@ def setup_environment(model_size='s', yolo_version='5.0'):
     if model_size == 'ad':
         print("=== Vérification d'ADYOLOv5-Face ===")
         
-        # Vérifier la présence des fichiers ADYOLOv5-Face (déjà dans le repo)
+        # Vérifier la présence des fichiers ADYOLOv5-Face (déjà dans le repo forké)
         required_files = [
             os.path.join(yolo_dir, 'models', 'gd.py'),
-            os.path.join(yolo_dir, 'models', 'adyolov5s_simple.yaml'),
+            os.path.join(yolo_dir, 'models', 'adyolov5s.yaml'),
             os.path.join(yolo_dir, 'data', 'hyp.adyolo.yaml')
         ]
         
@@ -134,9 +134,9 @@ def setup_environment(model_size='s', yolo_version='5.0'):
         
         if missing_files:
             print(f"⚠️ Fichiers manquants pour ADYOLOv5-Face: {', '.join(missing_files)}")
-            print("Assurez-vous que le dépôt contient les modifications ADYOLOv5-Face.")
+            print("Assurez-vous que le dépôt forké contient les modifications ADYOLOv5-Face.")
         else:
-            print("✓ Tous les fichiers ADYOLOv5-Face sont présents")
+            print("✓ Tous les fichiers ADYOLOv5-Face sont présents dans le repo forké")
     
     # 7. Vérification de la compatibilité PyTorch 2.6+
     print("=== Vérification de la compatibilité PyTorch 2.6+ ===")
@@ -181,8 +181,16 @@ def setup_environment(model_size='s', yolo_version='5.0'):
             print(f"⚠️ Impossible d'exécuter la validation: {e}")
             print("Vous pouvez exécuter manuellement: !python test_adyolo_colab.py")
     
+    print("\n🎉 Configuration terminée avec succès !")
     print("Vous pouvez maintenant exécuter le script principal avec la commande:")
-    print("!python main.py --model-size ad")
+    if model_size == 'ad':
+        print("!python main.py --model-size ad")
+        print("\n📊 ADYOLOv5-Face configuré avec:")
+        print("   ✓ 4 têtes de détection (P2/P3/P4/P5)")
+        print("   ✓ Mécanisme Gather-and-Distribute")
+        print("   ✓ Correction YAML appliquée")
+    else:
+        print(f"!python main.py --model-size {model_size}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Configuration de l'environnement Colab pour YOLOv5-Face")
