@@ -113,294 +113,30 @@ def setup_environment(model_size='s', yolo_version='5.0'):
         else:
             print(f"✓ Poids yolov5{size}.pt déjà présents")
     
-    # 6. Si c'est ADYOLOv5, préparer les fichiers nécessaires
+    # 6. Si c'est ADYOLOv5, vérifier que les fichiers nécessaires sont présents
     if model_size == 'ad':
-        print("=== Configuration d'ADYOLOv5-Face ===")
+        print("=== Vérification d'ADYOLOv5-Face ===")
         
-        # Créer le module Gather-and-Distribute (gd.py)
-        gd_path = os.path.join(yolo_dir, 'models', 'gd.py')
-        if not os.path.exists(gd_path):
-            print("Création du module Gather-and-Distribute (gd.py)...")
-            gd_code = """
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from models.common import Conv, autopad
-
-class FeatureAlignmentModule(nn.Module):
-    \"\"\"Module d'alignement des caractéristiques pour le mécanisme GD\"\"\"
-    def __init__(self, target_size):
-        super(FeatureAlignmentModule, self).__init__()
-        self.target_size = target_size if isinstance(target_size, tuple) else (target_size, target_size)
+        # Vérifier la présence des fichiers ADYOLOv5-Face (déjà dans le repo)
+        required_files = [
+            os.path.join(yolo_dir, 'models', 'gd.py'),
+            os.path.join(yolo_dir, 'models', 'adyolov5s_simple.yaml'),
+            os.path.join(yolo_dir, 'data', 'hyp.adyolo.yaml')
+        ]
         
-    def forward(self, features):
-        aligned_features = []
-        for feat in features:
-            h, w = feat.shape[2], feat.shape[3]
-            th, tw = self.target_size
-            
-            # Si la feature map est plus petite que la cible, utilisez une interpolation bilinéaire
-            if h < th or w < tw:
-                aligned = F.interpolate(feat, size=self.target_size, mode='bilinear', align_corners=False)
-            # Si la feature map est plus grande que la cible, utilisez un average pooling
-            elif h > th or w > tw:
-                # Calculer le facteur d'échelle pour le redimensionnement
-                scale_h, scale_w = h / th, w / tw
-                if scale_h > 1 and scale_w > 1:
-                    aligned = F.adaptive_avg_pool2d(feat, self.target_size)
-                else:
-                    aligned = F.interpolate(feat, size=self.target_size, mode='bilinear', align_corners=False)
+        missing_files = []
+        for file_path in required_files:
+            if os.path.exists(file_path):
+                print(f"✓ {os.path.basename(file_path)} présent")
             else:
-                aligned = feat
-            aligned_features.append(aligned)
-        return aligned_features
-
-class InformationFusionModule(nn.Module):
-    \"\"\"Module de fusion des informations pour le mécanisme GD\"\"\"
-    def __init__(self, channels):
-        super(InformationFusionModule, self).__init__()
-        self.conv1 = Conv(channels, channels, k=1)
-        self.conv3 = Conv(channels, channels, k=3, p=1)
-        self.attention = nn.Sequential(
-            nn.AdaptiveAvgPool2d(1),
-            nn.Conv2d(channels, channels // 16, 1),
-            nn.SiLU(),
-            nn.Conv2d(channels // 16, channels, 1),
-            nn.Sigmoid()
-        )
+                missing_files.append(os.path.basename(file_path))
+                print(f"✗ {os.path.basename(file_path)} manquant")
         
-    def forward(self, features):
-        # Additionner les features alignées
-        fused = sum(features)
-        # Appliquer une convolution 1x1
-        fused = self.conv1(fused)
-        # Appliquer une convolution 3x3
-        fused = self.conv3(fused)
-        # Appliquer l'attention
-        att = self.attention(fused)
-        return fused * att
-
-class InformationInjectionModule(nn.Module):
-    \"\"\"Module d'injection d'informations pour le mécanisme GD\"\"\"
-    def __init__(self, channels):
-        super(InformationInjectionModule, self).__init__()
-        self.conv1 = Conv(channels, channels, k=1)
-        self.conv3 = Conv(channels, channels, k=3, p=1)
-        
-    def forward(self, x, global_info):
-        # Adapter la taille du global_info à celle de x si nécessaire
-        if global_info.shape[2:] != x.shape[2:]:
-            global_info = F.interpolate(
-                global_info, size=x.shape[2:], mode='bilinear', align_corners=False
-            )
-        
-        # Additionner les features
-        x = x + global_info
-        # Appliquer une convolution 1x1
-        x = self.conv1(x)
-        # Appliquer une convolution 3x3
-        x = self.conv3(x)
-        return x
-
-class LowStageGD(nn.Module):
-    \"\"\"Mécanisme Gather-and-Distribute pour les couches de bas niveau\"\"\"
-    def __init__(self, channels):
-        super(LowStageGD, self).__init__()
-        self.target_size = 80  # Taille cible pour l'alignement des features
-        self.fam = FeatureAlignmentModule(self.target_size)
-        self.ifm = InformationFusionModule(channels)
-        self.iim = nn.ModuleList([
-            InformationInjectionModule(channels) for _ in range(3)
-        ])
-        
-    def forward(self, x):
-        # x devrait être une liste [P3, P4, P5]
-        aligned_features = self.fam(x)
-        global_info = self.ifm(aligned_features)
-        
-        # Injecter l'information globale dans chaque niveau de feature
-        enhanced_features = []
-        for i, feat in enumerate(x):
-            enhanced = self.iim[i](feat, global_info)
-            enhanced_features.append(enhanced)
-            
-        return enhanced_features
-
-class HighStageGD(nn.Module):
-    \"\"\"Mécanisme Gather-and-Distribute pour les couches de haut niveau\"\"\"
-    def __init__(self, channels):
-        super(HighStageGD, self).__init__()
-        self.target_size = 40  # Taille cible plus petite pour l'alignement des features
-        self.fam = FeatureAlignmentModule(self.target_size)
-        self.ifm = InformationFusionModule(channels)
-        self.iim = nn.ModuleList([
-            InformationInjectionModule(channels) for _ in range(3)
-        ])
-        self.extra_conv = Conv(channels, channels, k=3, p=1)
-        
-    def forward(self, x):
-        # x devrait être une liste [P3, P4, P5]
-        aligned_features = self.fam(x)
-        global_info = self.ifm(aligned_features)
-        global_info = self.extra_conv(global_info)
-        
-        # Injecter l'information globale dans chaque niveau de feature
-        enhanced_features = []
-        for i, feat in enumerate(x):
-            enhanced = self.iim[i](feat, global_info)
-            enhanced_features.append(enhanced)
-            
-        return enhanced_features
-
-def make_divisible(x, divisor):
-    # Fonction utilitaire pour s'assurer que tous les nombres de filtres sont un multiple du diviseur donné
-    return max(int(x + divisor / 2) // divisor * divisor, divisor)
-"""
-            os.makedirs(os.path.dirname(gd_path), exist_ok=True)
-            with open(gd_path, 'w') as f:
-                f.write(gd_code.strip())
-            print(f"✓ Fichier {gd_path} créé")
+        if missing_files:
+            print(f"⚠️ Fichiers manquants pour ADYOLOv5-Face: {', '.join(missing_files)}")
+            print("Assurez-vous que le dépôt contient les modifications ADYOLOv5-Face.")
         else:
-            print(f"✓ Fichier {gd_path} déjà présent")
-        
-        # Créer le fichier de configuration YAML pour ADYOLOv5
-        adyolo_yaml_path = os.path.join(yolo_dir, 'models', 'adyolov5s_simple.yaml')
-        if not os.path.exists(adyolo_yaml_path):
-            print("Création du fichier de configuration ADYOLOv5-Face (adyolov5s_simple.yaml)...")
-            adyolo_yaml_content = """
-# Modèle YOLOv5s adapté avec mécanisme GD pour ADYOLOv5-Face
-
-# Paramètres
-nc: 1  # nombre de classes (1 pour les visages)
-depth_multiple: 0.33  # facteur pour la profondeur du modèle
-width_multiple: 0.50  # facteur pour la largeur du modèle
-
-# Anchors
-anchors:
-  - [10,13, 16,30, 33,23]  # P3/8
-  - [30,61, 62,45, 59,119]  # P4/16
-  - [116,90, 156,198, 373,326]  # P5/32
-
-# YOLOv5s backbone
-backbone:
-  # [from, number, module, args]
-  [[-1, 1, Focus, [64, 3]],  # 0-P1/2
-   [-1, 1, Conv, [128, 3, 2]],  # 1-P2/4
-   [-1, 3, C3, [128]],
-   [-1, 1, Conv, [256, 3, 2]],  # 3-P3/8
-   [-1, 9, C3, [256]],
-   [-1, 1, Conv, [512, 3, 2]],  # 5-P4/16
-   [-1, 9, C3, [512]],
-   [-1, 1, Conv, [1024, 3, 2]],  # 7-P5/32
-   [-1, 1, SPP, [1024, [5, 9, 13]]],
-   [-1, 3, C3, [1024, False]],  # 9
-  ]
-
-# YOLOv5s head
-head:
-  [[-1, 1, Conv, [512, 1, 1]],
-   [-1, 1, nn.Upsample, [None, 2, 'nearest']],
-   [[-1, 6], 1, Concat, [1]],  # cat backbone P4
-   [-1, 3, C3, [512, False]],  # 13
-   
-   [-1, 1, Conv, [256, 1, 1]],
-   [-1, 1, nn.Upsample, [None, 2, 'nearest']],
-   [[-1, 4], 1, Concat, [1]],  # cat backbone P3
-   [-1, 3, C3, [256, False]],  # 17 (P3)
-   
-   # Ajout du mécanisme Gather-and-Distribute Low-Stage
-   [[17, 13, 9], 1, LowStageGD, [256]],  # 18: GD pour P3, P4, P5
-   
-   [18, 1, Conv, [256, 3, 2]],
-   [[-1, 13], 1, Concat, [1]],  # cat P4
-   [-1, 3, C3, [512, False]],  # 21 (P4)
-   
-   [-1, 1, Conv, [512, 3, 2]],
-   [[-1, 9], 1, Concat, [1]],  # cat P5
-   [-1, 3, C3, [1024, False]],  # 24 (P5)
-   
-   # Ajout du mécanisme Gather-and-Distribute High-Stage
-   [[18, 21, 24], 1, HighStageGD, [512]],  # 25: GD pour features améliorées
-   
-   [[18, 21, 24], 1, Detect, [nc, anchors]],  # 26: tête de détection
-  ]
-"""
-            os.makedirs(os.path.dirname(adyolo_yaml_path), exist_ok=True)
-            with open(adyolo_yaml_path, 'w') as f:
-                f.write(adyolo_yaml_content.strip())
-            print(f"✓ Fichier {adyolo_yaml_path} créé")
-        else:
-            print(f"✓ Fichier {adyolo_yaml_path} déjà présent")
-        
-        # Créer le fichier d'hyperparamètres pour ADYOLOv5
-        hyp_adyolo_path = os.path.join(yolo_dir, 'data', 'hyp.adyolo.yaml')
-        if not os.path.exists(hyp_adyolo_path):
-            print("Création du fichier d'hyperparamètres ADYOLOv5-Face (hyp.adyolo.yaml)...")
-            hyp_adyolo_content = """
-# Hyperparamètres optimisés pour ADYOLOv5-Face
-lr0: 0.01  # taux d'apprentissage initial
-lrf: 0.1  # facteur final du OneCycleLR (lr0 * lrf)
-momentum: 0.937  # momentum SGD
-weight_decay: 0.0005  # décroissance des poids
-warmup_epochs: 3.0  # epochs de warmup
-warmup_momentum: 0.8  # warmup momentum
-warmup_bias_lr: 0.1  # warmup bias lr
-box: 0.05  # perte de la boîte de délimitation
-cls: 0.5  # perte de classification
-cls_pw: 1.0  # pondération d'exponentielle positive de la perte de classification
-obj: 1.0  # perte d'objet
-obj_pw: 1.0  # pondération positive de la perte d'objet
-iou_t: 0.20  # seuil IoU de l'entraîneur
-anchor_t: 4.0  # ancre-vérité IoU seuil
-fl_gamma: 0.0  # perte focale gamma (efficacité, 0 signifie pas de FL)
-hsv_h: 0.015  # augmentation HSV-Hue
-hsv_s: 0.7  # augmentation HSV-Saturation
-hsv_v: 0.4  # augmentation HSV-Value
-degrees: 0.0  # augmentation de rotation de l'image (+/- deg)
-translate: 0.1  # augmentation de la translation de l'image (+/- fraction)
-scale: 0.5  # augmentation de l'échelle de l'image (+/- gain)
-shear: 0.0  # augmentation du cisaillement de l'image (+/- deg)
-perspective: 0.0  # augmentation de la perspective de l'image (+/- fraction), le 0 ne le désactive pas
-flipud: 0.0  # probabilité d'inclusion de l'augmentation de flipud de l'image
-fliplr: 0.5  # probabilité d'inclusion de l'augmentation de fliplr de l'image
-mosaic: 1.0  # probabilité d'inclusion de l'augmentation de mosaïque de l'image
-mixup: 0.1  # probabilité de l'augmentation de mixup de l'image
-copy_paste: 0.0  # probabilité de l'augmentation de copier-coller de l'image
-"""
-            os.makedirs(os.path.dirname(hyp_adyolo_path), exist_ok=True)
-            with open(hyp_adyolo_path, 'w') as f:
-                f.write(hyp_adyolo_content.strip())
-            print(f"✓ Fichier {hyp_adyolo_path} créé")
-        else:
-            print(f"✓ Fichier {hyp_adyolo_path} déjà présent")
-            
-        # Modifier le fichier yolo.py pour ajouter le support du mécanisme GD
-        yolo_py_path = os.path.join(yolo_dir, 'models', 'yolo.py')
-        if os.path.exists(yolo_py_path):
-            print("Mise à jour du fichier yolo.py pour supporter le mécanisme Gather-and-Distribute...")
-            with open(yolo_py_path, 'r') as f:
-                yolo_content = f.read()
-            
-            # Vérifier si l'importation du mécanisme GD est présente
-            if 'from models.gd import' not in yolo_content:
-                # Ajouter l'importation au début du fichier
-                import_line = 'from models.common import Conv, Bottleneck, SPP, DWConv, Focus, BottleneckCSP, C3, ShuffleV2Block, Concat, NMS, autoShape, StemBlock, BlazeBlock, DoubleBlazeBlock'
-                gd_import = 'from models.common import Conv, Bottleneck, SPP, DWConv, Focus, BottleneckCSP, C3, ShuffleV2Block, Concat, NMS, autoShape, StemBlock, BlazeBlock, DoubleBlazeBlock\nfrom models.gd import LowStageGD, HighStageGD'
-                yolo_content = yolo_content.replace(import_line, gd_import)
-                
-                # Ajouter le support du mécanisme GD dans la fonction parse_model
-                parse_model_section = 'elif m is Detect:'
-                gd_parse_section = 'elif m in [LowStageGD, HighStageGD]:\n            c2 = args[0]  # nombre de canaux de sortie\n        elif m is Detect:'
-                yolo_content = yolo_content.replace(parse_model_section, gd_parse_section)
-                
-                # Écrire les modifications dans le fichier
-                with open(yolo_py_path, 'w') as f:
-                    f.write(yolo_content)
-                print(f"✓ Fichier {yolo_py_path} mis à jour pour supporter le mécanisme GD")
-            else:
-                print(f"✓ Fichier {yolo_py_path} contient déjà le support du mécanisme GD")
-        else:
-            print(f"✗ Fichier {yolo_py_path} introuvable")
+            print("✓ Tous les fichiers ADYOLOv5-Face sont présents")
     
     # 7. Vérification de la compatibilité PyTorch 2.6+
     print("=== Vérification de la compatibilité PyTorch 2.6+ ===")
@@ -426,8 +162,27 @@ copy_paste: 0.0  # probabilité de l'augmentation de copier-coller de l'image
     print("\n=== Configuration terminée ===")
     if model_size == 'ad':
         print("ADYOLOv5-Face a été configuré avec le mécanisme Gather-and-Distribute pour améliorer la détection des petits visages.")
+    
+    # Test de validation pour ADYOLOv5-Face
+    if model_size == 'ad':
+        print("\n=== Validation ADYOLOv5-Face ===")
+        try:
+            # Importer et exécuter le test de validation
+            sys.path.insert(0, '/content')
+            from test_adyolo_colab import test_adyolo_colab
+            validation_success = test_adyolo_colab()
+            
+            if validation_success:
+                print("✓ Validation ADYOLOv5-Face réussie!")
+            else:
+                print("✗ Échec de la validation ADYOLOv5-Face")
+                
+        except Exception as e:
+            print(f"⚠️ Impossible d'exécuter la validation: {e}")
+            print("Vous pouvez exécuter manuellement: !python test_adyolo_colab.py")
+    
     print("Vous pouvez maintenant exécuter le script principal avec la commande:")
-    print("!python main.py")
+    print("!python main.py --model-size ad")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Configuration de l'environnement Colab pour YOLOv5-Face")
