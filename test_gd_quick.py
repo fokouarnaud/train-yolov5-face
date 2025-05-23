@@ -15,7 +15,8 @@ def test_gd_modules():
     print("🧪 Test des modules GD optimisés pour la mémoire...")
     
     # Ajouter le chemin YOLOv5-Face
-    yolo_path = "/content/yolov5-face"
+    from config import DEFAULT_PATHS
+    yolo_path = DEFAULT_PATHS["yolo_dir"]
     if yolo_path not in sys.path:
         sys.path.append(yolo_path)
     
@@ -103,7 +104,8 @@ def test_model_loading():
     """Test de chargement du modèle ADYOLOv5"""
     print("\n🏗️ Test de chargement du modèle ADYOLOv5...")
     
-    yolo_path = "/content/yolov5-face"
+    from config import DEFAULT_PATHS
+    yolo_path = DEFAULT_PATHS["yolo_dir"]
     sys.path.append(yolo_path)
     
     try:

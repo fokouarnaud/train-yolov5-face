@@ -8,7 +8,7 @@ import os
 import sys
 import subprocess
 import torch
-from config import MODELS, YOLO_FACE_PATH
+from config import MODEL_CONFIGS, DEFAULT_PATHS
 
 def optimize_gpu_memory():
     """Optimise les paramètres de mémoire GPU"""
@@ -47,25 +47,26 @@ def train_adyolov5_optimized():
     
     optimize_gpu_memory()
     
-    model_config = MODELS['ad']
+    model_config = MODEL_CONFIGS['ad']
+    yolo_face_path = DEFAULT_PATHS["yolo_dir"]
     optimal_batch_size = get_optimal_batch_size()
     
     print(f"🚀 Démarrage entraînement ADYOLOv5-Face optimisé")
     print(f"   📦 Batch size optimal: {optimal_batch_size}")
     print(f"   🖼️  Résolution: 512px (réduite pour économiser mémoire)")
-    print(f"   📁 Modèle: {model_config['config']}")
+    print(f"   📁 Modèle: {model_config['yaml']}")
     
     # Commande d'entraînement optimisée
     train_cmd = [
-        "python", f"{YOLO_FACE_PATH}/train.py",
-        "--data", f"{YOLO_FACE_PATH}/data/widerface.yaml",
-        "--cfg", f"{YOLO_FACE_PATH}/{model_config['config']}",
-        "--weights", f"{YOLO_FACE_PATH}/weights/yolov5s.pt",
+        "python", f"{yolo_face_path}/train.py",
+        "--data", f"{yolo_face_path}/data/widerface.yaml",
+        "--cfg", f"{yolo_face_path}/models/{model_config['yaml']}",
+        "--weights", f"{yolo_face_path}/weights/{model_config['weights']}",
         "--batch-size", str(optimal_batch_size),  # Batch size optimisé
         "--epochs", "50",  # Moins d'epochs pour test initial
         "--img", "512",  # Résolution réduite (au lieu de 640)
-        "--hyp", f"{YOLO_FACE_PATH}/data/hyp.adyolo.yaml",
-        "--project", f"{YOLO_FACE_PATH}/runs/train",
+        "--hyp", f"{yolo_face_path}/data/hyp.adyolo.yaml",
+        "--project", f"{yolo_face_path}/runs/train",
         "--name", "adyolov5_memory_optimized",
         "--exist-ok",
         "--cache",  # Cache les images pour accélérer
@@ -78,11 +79,11 @@ def train_adyolov5_optimized():
     
     try:
         # Lancer l'entraînement
-        result = subprocess.run(train_cmd, cwd=YOLO_FACE_PATH, capture_output=True, text=True)
+        result = subprocess.run(train_cmd, cwd=yolo_face_path, capture_output=True, text=True)
         
         if result.returncode == 0:
             print("✅ Entraînement terminé avec succès!")
-            print(f"📁 Résultats sauvés dans: {YOLO_FACE_PATH}/runs/train/adyolov5_memory_optimized")
+            print(f"📁 Résultats sauvés dans: {yolo_face_path}/runs/train/adyolov5_memory_optimized")
         else:
             print("❌ Erreur lors de l'entraînement:")
             print(result.stderr)
@@ -102,7 +103,8 @@ def test_memory_simple():
     
     try:
         # Import et test des modules
-        sys.path.append(YOLO_FACE_PATH)
+        yolo_face_path = DEFAULT_PATHS["yolo_dir"]
+        sys.path.append(yolo_face_path)
         from models.gd import GDFusion, AttentionFusion, TransformerFusion
         
         # Test avec tenseurs de petite taille
