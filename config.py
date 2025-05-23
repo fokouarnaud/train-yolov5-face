@@ -28,11 +28,20 @@ DEFAULT_PATHS = {
     "results_dir": "/content/drive/MyDrive/YOLOv5_Face_Results",
 }
 
-# Configuration de l'entraînement par défaut
+# Configuration de l'entraînement par défaut (conforme à l'article ADYOLOv5-Face)
 DEFAULT_TRAINING = {
-    "batch_size": 40,
-    "epochs": 300,
-    "img_size": 640,
+    "batch_size": 32,  # Conforme à l'article (32)
+    "epochs": 250,     # Conforme à l'article (250)
+    "img_size": 640,   # Conforme à l'article (640)
+    "model_size": "s",
+    "yolo_version": "5.0",
+}
+
+# Configuration alternative pour environnements avec contraintes mémoire
+MEMORY_OPTIMIZED_TRAINING = {
+    "batch_size": 16,  # Réduit pour éviter CUDA Out of Memory
+    "epochs": 100,     # Réduit pour tests plus rapides
+    "img_size": 512,   # Réduit pour économiser mémoire
     "model_size": "s",
     "yolo_version": "5.0",
 }
@@ -79,10 +88,10 @@ MODEL_CONFIGS = {
         "weights": "yolov5l6.pt",
         "img_size": 640,
     },
-    "ad": {  # ADYOLOv5-Face
+    "ad": {  # ADYOLOv5-Face (conforme à l'article)
         "yaml": "adyolov5s.yaml",
         "weights": "yolov5s.pt",  # Utilise les poids de base de YOLOv5s
-        "img_size": 640,
+        "img_size": 640,  # Conforme à l'article ADYOLOv5-Face
     },
 }
 

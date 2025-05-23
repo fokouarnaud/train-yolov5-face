@@ -18,6 +18,7 @@ from data_preparation import DataPreparation
 from model_training import ModelTrainer
 from model_evaluation import ModelEvaluator
 from utils import setup_environment, fix_numpy_issue
+from config import MEMORY_OPTIMIZED_TRAINING
 # Le fix PyTorch n'est plus nécessaire car il est intégré dans le dépôt forké
 # from pytorch_fix import fix_pytorch_compatibility
 
@@ -41,8 +42,8 @@ def parse_args():
                         help='Ignorer l\'étape d\'évaluation')
     parser.add_argument('--skip-export', action='store_true',
                         help='Ignorer l\'étape d\'exportation')
-    parser.add_argument('--memory-optimized', action='store_true',
-                        help='Utiliser l\'entraînement optimisé pour la mémoire (batch size réduit, résolution adaptative)')
+    parser.add_argument('--paper-config', action='store_true',
+                        help='Utiliser la configuration conforme à l\'article ADYOLOv5-Face (batch=32, epochs=250, img=640)')
     
     return parser.parse_args()
 
@@ -74,6 +75,33 @@ def main():
     )
     data_prep.prepare_dataset()
     
+    # Configuration des paramètres d'entraînement
+    if not args.paper_config and args.model_size == 'ad':
+        # Utiliser la configuration optimisée mémoire par défaut pour ADYOLOv5
+        print("\n=== Configuration Optimisée Mémoire (par défaut) ===")
+        print(f"Batch size: {MEMORY_OPTIMIZED_TRAINING['batch_size']} (au lieu de 32)")
+        print(f"Epochs: {MEMORY_OPTIMIZED_TRAINING['epochs']} (au lieu de 250)")
+        print(f"Image size: {MEMORY_OPTIMIZED_TRAINING['img_size']} (au lieu de 640)")
+        print("Utilise --paper-config pour la configuration conforme à l'article")
+        
+        # Override des paramètres si pas spécifiés
+        if args.batch_size == DEFAULT_TRAINING["batch_size"]:
+            args.batch_size = MEMORY_OPTIMIZED_TRAINING["batch_size"]
+        if args.epochs == DEFAULT_TRAINING["epochs"]:
+            args.epochs = MEMORY_OPTIMIZED_TRAINING["epochs"]
+        if args.img_size == DEFAULT_TRAINING["img_size"]:
+            args.img_size = MEMORY_OPTIMIZED_TRAINING["img_size"]
+    
+    elif args.paper_config and args.model_size == 'ad':
+        print("\n=== Configuration Conforme à l'Article ADYOLOv5-Face ===")
+        print(f"Batch size: {args.batch_size} (conforme à l'article)")
+        print(f"Epochs: {args.epochs} (conforme à l'article)")
+        print(f"Image size: {args.img_size} (conforme à l'article)")
+        print("Hyperparamètres: hyp.adyolo.paper.yaml (SGD, lr=1e-2)")
+        
+        # Modifier le fichier hyperparamètres pour utiliser celui de l'article
+        MODEL_CONFIGS['ad']['hyp'] = 'data/hyp.adyolo.paper.yaml'
+    
     # Étape 3: Corriger les problèmes connus
     fix_numpy_issue(yolo_dir)
     
@@ -94,28 +122,16 @@ def main():
     
     # Étape 4: Entraînement du modèle
     if not args.skip_train:
-        if args.memory_optimized and args.model_size == 'ad':
-            # Utiliser l'entraînement optimisé pour ADYOLOv5-Face
-            print("\n=== Mode entraînement optimisé mémoire ===\n")
-            from train_adyolo_optimized import train_adyolov5_optimized
-            try:
-                train_adyolov5_optimized()
-                train_success = True
-            except Exception as e:
-                print(f"❌ Erreur entraînement optimisé: {e}")
-                train_success = False
-        else:
-            # Entraînement standard
-            trainer = ModelTrainer(
-                yolo_dir=yolo_dir,
-                data_dir=data_dir,
-                batch_size=args.batch_size,
-                epochs=args.epochs,
-                img_size=args.img_size,
-                model_size=args.model_size,
-                yolo_version=args.yolo_version
-            )
-            train_success = trainer.train()
+        trainer = ModelTrainer(
+            yolo_dir=yolo_dir,
+            data_dir=data_dir,
+            batch_size=args.batch_size,
+            epochs=args.epochs,
+            img_size=args.img_size,
+            model_size=args.model_size,
+            yolo_version=args.yolo_version
+        )
+        train_success = trainer.train()
     else:
         train_success = True
         print("\n=== Étape d'entraînement ignorée ===")
