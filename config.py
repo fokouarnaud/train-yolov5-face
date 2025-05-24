@@ -30,18 +30,18 @@ DEFAULT_PATHS = {
 
 # Configuration de l'entraînement par défaut (conforme à l'article ADYOLOv5-Face)
 DEFAULT_TRAINING = {
-    "batch_size": 32,  # Conforme à l'article (32)
-    "epochs": 250,     # Conforme à l'article (250)
-    "img_size": 640,   # Conforme à l'article (640)
+    "batch_size": 32,  # Conforme à l'article (32) - OPTIMISÉ
+    "epochs": 250,     # Conforme à l'article (250) - OPTIMISÉ
+    "img_size": 640,   # Conforme à l'article (640) - OPTIMISÉ
     "model_size": "s",
     "yolo_version": "5.0",
 }
 
 # Configuration alternative pour environnements avec contraintes mémoire
 MEMORY_OPTIMIZED_TRAINING = {
-    "batch_size": 16,  # Réduit pour éviter CUDA Out of Memory
-    "epochs": 100,     # Réduit pour tests plus rapides
-    "img_size": 512,   # Réduit pour économiser mémoire
+    "batch_size": 24,  # OPTIMISÉ: équilibre entre performance et mémoire
+    "epochs": 150,     # OPTIMISÉ: compromis performance/temps
+    "img_size": 576,   # OPTIMISÉ: meilleur compromis pour petits visages
     "model_size": "s",
     "yolo_version": "5.0",
 }

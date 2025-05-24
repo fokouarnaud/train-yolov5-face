@@ -177,10 +177,20 @@ class ModelTrainer:
         
         # Utiliser le fichier d'hyperparamètres spécial pour ADYOLOv5-Face
         if self.model_size == 'ad':
-            hyp_adyolo = f'{self.yolo_dir}/data/hyp.adyolo.yaml'
+            # Vérifier si on utilise la configuration article
+            if 'hyp' in MODEL_CONFIGS['ad'] and MODEL_CONFIGS['ad']['hyp'] == 'data/hyp.adyolo.paper.yaml':
+                hyp_adyolo = f'{self.yolo_dir}/data/hyp.adyolo.paper.yaml'
+                print(f"  - Utilisation des hyperparamètres conformes à l'article: {hyp_adyolo}")
+            else:
+                hyp_adyolo = f'{self.yolo_dir}/data/hyp.adyolo.yaml'
+                print(f"  - Utilisation des hyperparamètres optimisés: {hyp_adyolo}")
+            
             if os.path.exists(hyp_adyolo):
-                train_cmd.extend(['--hyp', hyp_adyolo])
-                print(f"  - Utilisation des hyperparamètres optimisés pour petits visages: {hyp_adyolo}")
+                # Remplacer le hyp_path par celui d'ADYOLOv5
+                for i, arg in enumerate(train_cmd):
+                    if arg == '--hyp' and i + 1 < len(train_cmd):
+                        train_cmd[i + 1] = hyp_adyolo
+                        break
             else:
                 print(f"  - Fichier d'hyperparamètres {hyp_adyolo} non trouvé, utilisation des valeurs par défaut")
         
